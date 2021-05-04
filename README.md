@@ -133,6 +133,10 @@ this is done as the following: sage the method as a string, then call: `getRequi
 The tool is useable and can be utilied
 BUT: the _parser_ and the _JML processer_ is not in a complete state in the sense that not everything can be yet parsed because this project was mainly begun with for research reasons. however it's meant to be re-written in the near future to suit the needs of any casual java programmer.
 
+The main focus was so far on two tasks:
+- destinguishing pure methods from impure methods, which was succesfully achieved using the funcion `isPure`
+- distinguishing normal behavioral from exceptional behavior which is of relevance to produce jml syntax.
+and for these tasks a minimal implementation of the parser is sufficient, which results in a minimal implementation of the JML producer which in itself is complete for the wished to-be-discussed criteria.
 ---
 
 The project is built using [stack 2.5.1](https://docs.haskellstack.org/en/stable/README/)
