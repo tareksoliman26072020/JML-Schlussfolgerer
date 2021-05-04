@@ -7,17 +7,16 @@ this project is a software suite written completely in haskell, and it includes 
 ### Examples for the utility of the parser
 The following java method will be fed into a stateful monadic funcion in haskell to be parsed
 ```java
-public int boo27(int i){
-  if(i >= 0){
-    return i;
-  }
-  else{
-    int res = -1 * i;
-    return res;
-  }
+public int increaseByFour(int x){
+    int y = x + 4;
+    z = 0;
+    return y;
 }
+
 ```
+
 which gives:
+
 ```haskell
 Just (
   FunDef {funModifier = [Public],
@@ -41,6 +40,9 @@ Just (
                                                          varName = "y"})}]}},
   "")
 ```
+
+This is done as the following: store the java method as a string, then pass it as an argument: `parse parseFunDef method`
+
 ---
 ### Examples for JML:
 ```java
@@ -125,6 +127,9 @@ public int boo27(int i){
 }
 ```
 
+this is done as the following: sage the method as a string, then call: `getRequireBehavior False method "boo27"`
+
+---
 The tool is useable and can be utilied
 BUT: the _parser_ and the _JML processer_ is not in a complete state in the sense that not everything can be yet parsed because this project was mainly begun with for research reasons. however it's meant to be re-written in the near future to suit the needs of any casual java programmer.
 
