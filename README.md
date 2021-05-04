@@ -1,7 +1,7 @@
 # JML-Schlussfolgerer
 this project is a software suite written completely in haskell, and it includes two softwares
 - the first is for parsing java syntax.
-- the second is to process the parsed java code and process it to produce the corresponding JML-syntax for the represented java source code.
+- the second is to process the parsed java code and process it to produce the corresponding [JML](https://en.wikipedia.org/wiki/Java_Modeling_Language)-syntax for the represented java source code.
 > The Java Modeling Language (JML) is a specification language for Java programs, using Hoare style pre- and postconditions and invariants, that follows the design by contract paradigm. Specifications are written as Java annotation comments to the source files, which hence can be compiled with any Java compiler.
 ---
 ### Examples for the utility of the parser
