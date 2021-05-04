@@ -29,7 +29,10 @@ Just (
           throws = Nothing,
           funBody = CompStmt {statements = [
                     AssignStmt {varModifier = [],
-                                assign = AssignExpr {assEleft = VarExpr {varType = Just (BuiltInType Int), varObj = [], varName = "y"}, assEright = BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "x"}, binOp = Plus, expr2 = IntLiteral 4}}},
+                                assign = AssignExpr {assEleft = VarExpr {varType = Just (BuiltInType Int), varObj = [], varName = "y"},
+                                                     assEright = BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "x"},
+                                                                            binOp = Plus,
+                                                                            expr2 = IntLiteral 4}}},
                     AssignStmt {varModifier = [],
                                 assign = AssignExpr {assEleft = VarExpr {varType = Nothing, varObj = [], varName = "z"},
                                                      assEright = IntLiteral 0}},
@@ -128,4 +131,5 @@ BUT: the _parser_ and the _JML processer_ is not in a complete state in the sens
 ---
 
 The project is built using [stack 2.5.1](https://docs.haskellstack.org/en/stable/README/)
+
 [INTELLIJ idea](https://www.jetbrains.com/de-de/idea/) is being used as an editor, and the plugin [IntelliJ-Haskell](https://plugins.jetbrains.com/plugin/8258-intellij-haskell) as the language support for INTELLIJ
