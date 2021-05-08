@@ -347,7 +347,18 @@ example92 = "public int boo9(){" ++ "\n"
          ++ "  }" ++ "\n"
          ++ "}"
 
-example93 = "public void boo10(){" ++ "\n"
+example93 = "public int boo10(){" ++ "\n"
+         ++ "  int b = 1;" ++ "\n"
+         ++ "  if(b<10){" ++ "\n"
+         ++ "    int z = 2;" ++ "\n"
+         ++ "    return z;" ++ "\n"
+         ++ "  }else{" ++ "\n"
+         ++ "    int t = 3;" ++ "\n"
+         ++ "    return t;" ++ "\n"
+         ++ "  }" ++ "\n"
+         ++ "}"
+
+example93_2 = "public void boo10_2(){" ++ "\n"
          ++ "  int b = 1;" ++ "\n"
          ++ "  if(b<10){" ++ "\n"
          ++ "    int z = 2;" ++ "\n"
@@ -537,7 +548,7 @@ example109 = "public int boo24(){" ++ "\n"
   @ requires i<=10;
   @ assignable \nothing;
   @ ensures \result = 6;
-@*/
+  @*/
 
 [(Just Exception,
   JMLExpr (BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "i"}, binOp = Greater, expr2 = IntLiteral 10}),
@@ -553,7 +564,7 @@ example110 = "public int boo25(int i){" ++ "\n"
          ++ "  }" ++ "\n"
          ++ "  else{" ++ "\n"
          ++ "    return 6;" ++ "\n"
-         ++ "  }"
+         ++ "  }" ++ "\n"
          ++ "}"
 
 {-
@@ -566,7 +577,7 @@ example110 = "public int boo25(int i){" ++ "\n"
   @ requires (boo27->i)<0;
   @ assignable \nothing;
   @ ensures \result = (-1)*(boo27->i);
-@*/
+  @*/
 
 [(Nothing,
   JMLExpr (BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "boo27->i"}, binOp = GreaterEq, expr2 = IntLiteral 0}),
@@ -590,7 +601,7 @@ example111 = "public int boo26(){" ++ "\n"
   @ requires i<0;
   @ assignable \nothing;
   @ ensures \result = (-1)*i;
-@*/
+  @*/
 
 [(Nothing,
   JMLExpr (BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "i"}, binOp = GreaterEq, expr2 = IntLiteral 0}),
@@ -629,7 +640,7 @@ example112 = "public int boo27(int i){" ++ "\n"
   @ requires (noo27->i)<0;
   @ assignable \nothing;
   @ ensures \result = (-1)*(boo27->i);
-@*/
+  @*/
 
 [(Just Exception,
   JMLExpr (BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "x"}, binOp = Eq, expr2 = IntLiteral 3}),
@@ -659,7 +670,7 @@ example113 = "public int boo28(){" ++ "\n"
           ++ "  }" ++ "\n"
           ++ "  catch(Exception e){" ++ "\n"
           ++ "    return boo27(5);" ++ "\n"
-          ++ "  }"
+          ++ "  }" ++ "\n"
           ++ "}"
 
 {-
@@ -702,3 +713,6 @@ banana = ((fst . fromJust) .) . parse
 --TODO: parse lambda expressions for assigns
 --TODO: parse comments
 --TODO: parseAssign for right side is far from complete
+--TODO: parse if without the necessity of the existence of else
+--TODO: parse inner single statements without the necessity of the existence of brackets
+--TODO: and MUCH more

@@ -107,7 +107,7 @@ takeOnlyIfBefore ch1 ch2 = Parser $ \str -> case elem ch2 str of
     let first1 = head $ splitOn [ch2] str
         rest2  = last $ splitOn [ch2] str
     in case elem ch1 first1 of
-      True  -> 
+      True  ->
         let first2 = head $ splitOn [ch1] first1
             rest1  = last $ splitOn [ch1] first1
         in Just(first2,rest1 ++ [ch2] ++ rest2)

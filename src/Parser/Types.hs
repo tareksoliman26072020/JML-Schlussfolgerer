@@ -1,11 +1,26 @@
-{-# LANGUAGE FlexibleInstances #-}
 module Types where
 
 import qualified Control.Exception as E
 
-data BinOp = Plus | Mult | Minus | Div | Mod | Less | LessEq | Greater | GreaterEq | Eq | Neq | And | Or deriving (Eq, Show)
+data BinOp = Plus | Mult | Minus | Div | Mod | Less | LessEq | Greater | GreaterEq | Eq | Neq | And | Or deriving Eq
+instance Show BinOp where
+  show Plus      = "+"
+  show Mult      = "*"
+  show Minus     = "-"
+  show Div       = "/"
+  show Mod       = "%"
+  show Less      = "<"
+  show LessEq    = "<="
+  show Greater   = ">"
+  show GreaterEq = ">="
+  show Eq        = "=="
+  show Neq       = "!="
+  show And       = " && "
+  show Or        = " || "
 
-data UnOp = NotOp deriving (Eq, Show)
+data UnOp = NotOp deriving Eq
+instance Show UnOp where
+  show NotOp = "!"
 
 data Expression
   = IntLiteral Int
@@ -90,7 +105,7 @@ data Exception
   | UserDefException String
   deriving(Show,Eq)
 
-data NotatedException = NoteExcp String
+newtype NotatedException = NoteExcp String
 
 instance Show NotatedException where
   show (NoteExcp str) = str

@@ -1,4 +1,4 @@
-{-# Language LambdaCase #-}
+{-# Language LambdaCase,NamedFieldPuns #-}
 module RefineParsed where
 import Types
 import Prelude hiding(negate)
@@ -29,8 +29,8 @@ findParsedFunction str list =
     where
       f :: ExternalDeclaration -> Bool
       f (FunDef _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName == str
-      f (FunDef _ (FunCallStmt (FunCallExpr _ _)) _ _) = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -> FunCallStmt -> FunCallExpr -/> VarExpr"
-      f (FunDef _ _ _ _) = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -/> FunCallStmt"
+      f (FunDef _ FunCallStmt{} _ _) = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -> FunCallStmt -> FunCallExpr -/> VarExpr"
+      f FunDef{} = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -/> FunCallStmt"
       --uncomment this in case of extending ExternalDeclaration:
 --    f _            = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -/> FunDef"
 
@@ -42,7 +42,7 @@ getFunLocalVariables :: ExternalDeclaration -> [String]
 getFunLocalVariables (FunDef _ (FunCallStmt (FunCallExpr _ funArgs)) _ funBody)
   | null funArgs = getCompStmtLocalVariables funBody
   | otherwise    = case head funArgs of
-    VarExpr _ _ _ -> map varName funArgs ++ getCompStmtLocalVariables funBody
+    VarExpr{} -> map varName funArgs ++ getCompStmtLocalVariables funBody
     _ -> throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -> FunDef -> (FunCallStmt (FunCallExpr _ (-/>VarExpr)))"
 --uncomment this in case of extending ExternalDeclaration:
 --getFunLocalVariables _ = throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -/> FunDef"
@@ -61,14 +61,12 @@ getUnparsedFunction methods seeked = fst $ fromJust $ parse getIt methods
             splittedAtModifiers = splitOn (fromModifiers modifiers) fun
             yes                 = fromModifiers modifiers ++ last splittedAtModifiers
         in return yes
-      else do
-        continue <- getIt
-        return continue
+      else getIt
 
 getFunsNames :: String -> [String]
 getFunsNames methods =
   let parsed = parse parseFunDefs methods
-  in if isNothing parsed || (isJust parsed && (not $ null $ snd $ fromJust $ parsed))
+  in if isNothing parsed || (isJust parsed && (not $ null $ snd $ fromJust parsed))
        then throw $ NoteExcp "{{getFunctions}}: parsed == Nothing || snd parsed /= null"
      else
        let extDecls = fst $ fromJust parsed
@@ -177,25 +175,33 @@ getStmtOfVar stmts var =
     takeFirstOccurrence :: (Statement -> Bool) -> [Statement] -> Statement
     takeFirstOccurrence f [] = throw $ NoteExcp "(getStmtOfVar -> takeFIrstOccurrence): given list is empty or Statement were not found"
     takeFirstOccurrence f (x:rest) = if f x then x else takeFirstOccurrence f rest
-    
+
+    -- look up the `var` in the given statement.
+    -- if found, then return True
     f :: Statement -> Bool
     --AssignExpr {assEleft :: Expression, assEright :: Expression}
     --VarExpr {varType :: Maybe (Type Types), varObj :: [String], varName :: String}
     f (AssignStmt _ (AssignExpr (VarExpr _ _ varName) _)) | varName == var = True
-    f (AssignStmt _ _) = False
+    f AssignStmt{} = False
     f (ForStmt (CompStmt acc) _ _ (CompStmt body)) = any f (acc++body)
     f (WhileStmt _ (CompStmt body)) = any f body
     f (TryCatchStmt body1 _ body2 body3) = any f [body1,body2,body3]
-    
+    f CondStmt {siff, selsee} = any f [siff,selsee]
+    f (CompStmt list) = any f list
+    f ReturnStmt{} = False--throw $ NoteExcp $ printf "193:\n%s" (show a)
+
     extract :: Statement -> Statement
     extract (CompStmt stmtList) = takeFirstOccurrence f stmtList
-    extract a@(AssignStmt _ _) = a
+    extract a@AssignStmt{} = a
     extract (ForStmt (CompStmt acc) _ _ (CompStmt body)) = extract (CompStmt $ acc ++ body)
     extract (WhileStmt _ body) = extract body
     extract (TryCatchStmt (CompStmt body1) _ (CompStmt body2) (CompStmt body3)) = extract (CompStmt $ body1 ++ body2 ++ body3)
-    
+    --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}
+    extract CondStmt{siff=CompStmt ifs, selsee=CompStmt elses} = extract (CompStmt $ ifs ++ elses)
+
     whatIsThis :: Statement -> String
-    whatIsThis (AssignStmt _ _)       = "Assign"
-    whatIsThis (ForStmt _ _ _ _)      = "For"
-    whatIsThis (WhileStmt _ _)        = "While"
-    whatIsThis (TryCatchStmt _ _ _ _) = "Try"
+    whatIsThis AssignStmt{}   = "Assign"
+    whatIsThis ForStmt{}      = "For"
+    whatIsThis WhileStmt{}    = "While"
+    whatIsThis TryCatchStmt{} = "Try"
+    whatIsThis CondStmt{siff, selsee} = "Cond"--throw $ NoteExcp $ printf "208:\n%s" (show a)
