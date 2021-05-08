@@ -18,4 +18,6 @@ import RefineParsed
 import Control.Exception(throw)
 
 main :: IO ()
-main = putStrLn $ show $ fst $ fromJust $ parse parseFunDef example75
+main = --print $ parse parseFunDef example109
+  --print $ getRequireBehavior False (example109++example110) "boo24"
+  putStr $ jmlify example107
