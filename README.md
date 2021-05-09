@@ -38,6 +38,8 @@ This is done as the following:
   - Then build the project: `stack build`
   - Use the command: `stack ghci --only-main`
   - store the java method as a string, then pass it as an argument: `runStateT parseFunDef "public int foo(){return 666;}"`
+Note: The parser is not completely implemented in the sense that not every input can be parsed.
+      Have a look at src/Examples.hs to be familiar with the kind of functions that can be parsed.
 
 ---
 ### Examples for JML:
