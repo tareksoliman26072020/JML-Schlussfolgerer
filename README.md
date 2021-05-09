@@ -33,7 +33,11 @@ Just (
 "")
 ```
 
-This is done as the following: store the java method as a string, then pass it as an argument: `runStateT parseFunDef "public int foo(){return 666;}"`
+This is done as the following: 
+  - Make sure that you installed [stack](https://docs.haskellstack.org/en/stable/README/)
+  - Then build the project: `stack build`
+  - Use the command: `stack ghci --only-main`
+  - store the java method as a string, then pass it as an argument: `runStateT parseFunDef "public int foo(){return 666;}"`
 
 ---
 ### Examples for JML:
