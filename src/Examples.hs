@@ -1,6 +1,6 @@
 module Examples where
-import Parser
 import Data.Maybe
+import Control.Monad.State(StateT(runStateT))
 
 -- Method has modifier and type and name
 example1 =
@@ -699,11 +699,11 @@ example114 = "public static int sqrt(int y) throws Exception{" ++ "\n"
           ++ "  }" ++ "\n"
           ++ "}"
 
-example107 = example105 ++ example106 ++ example106_2 ++ example108 ++ example109 ++ example110 ++ example111 ++ example112 ++ example113 ++ example114
+example107 = unlines [example105,example106,example106_2,example108,example109,example110,example111,example112,example113,example114]
 
 spaces n = replicate n ' '
 
-banana = ((fst . fromJust) .) . parse
+banana = ((fst . fromJust) .) . runStateT
 -------------------------------------------------
 --TODO: parse list of generics instead of only single generic: in parsing variables, functions
 --TODO: parseBinOp for ++, --, += , ....etc

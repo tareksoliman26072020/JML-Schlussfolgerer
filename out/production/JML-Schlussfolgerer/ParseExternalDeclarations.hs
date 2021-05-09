@@ -8,6 +8,7 @@ import ParseStatements
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.State(runStateT)
 import Data.Char(isAlphaNum,isSpace,isDigit)
 import Data.List.Split(splitOn)
 import Data.List(isPrefixOf,(\\),elemIndices,isInfixOf)
@@ -28,7 +29,7 @@ parseFunDef = do
   let x = takeUntilBracesClosed state '{' '}'
   if isNothing x then failure
   else
-    let y = parse (parseFunDef' maybeModifier funDecll) (fromJust x)
+    let y = runStateT (parseFunDef' maybeModifier funDecll) (fromJust x)
     in
       if isNothing y then failure
       else do
@@ -84,7 +85,7 @@ parseFunDecl = do
   else do
     let splitted = splitOn "," (tail $ init $ fromJust unrefined)
         listArgs = if length splitted == 1 && length (head splitted) == 0 then []
-                   else map (fst . fromJust . (parse (parseVariableExpr ";")) . (++";")) splitted
+                   else map (fst . fromJust . (runStateT (parseVariableExpr ";")) . (++";")) splitted
     newState (state \\ fromJust unrefined)
     return $ FunCallStmt $ FunCallExpr {funName = name, funArgs = listArgs}
 

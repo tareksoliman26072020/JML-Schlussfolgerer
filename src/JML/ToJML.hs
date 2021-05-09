@@ -4,7 +4,8 @@ module ToJML where
 import ParseExternalDeclarations
 import JMLTypes
 import Types
-import Parser(Parser(parse),failure)
+import Parser(Parser,failure)
+import Control.Monad.State(runStateT)
 import RefineParsed
 import qualified Prelude as Maybe (Maybe(Nothing))
 import Prelude hiding(negate)
@@ -18,7 +19,7 @@ import Data.Either(partitionEithers)
 import Control.Applicative(optional)
 
 isPure :: String -> String -> Bool
-isPure methods funName = case parse parseFunDefs methods of
+isPure methods funName = case runStateT parseFunDefs methods of
   Maybe.Nothing -> throw $ NoteExcp "{{isPure}}: parse parseFunDefs methods -> Nothing"
   Just (extDeclList,_) ->
     let getFunExtDecl :: Maybe ExternalDeclaration
@@ -96,7 +97,7 @@ isPure methods funName = case parse parseFunDefs methods of
     process4 _ _ = True
 
 jmlify :: String -> String
-jmlify sourceCode = fst $ fromJust $ parse jmlify_ sourceCode
+jmlify sourceCode = fst $ fromJust $ runStateT jmlify_ sourceCode
   where
     jmlify_ :: Parser String
     jmlify_ = do
@@ -117,7 +118,7 @@ jmlify sourceCode = fst $ fromJust $ parse jmlify_ sourceCode
       else return $ jml ++ "\n" ++ purified_fun ++ "\n\n" ++ fromJust next
 
 getRequireBehavior :: Bool -> String -> String -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
-getRequireBehavior called methods funName = case parse parseFunDefs methods of
+getRequireBehavior called methods funName = case runStateT parseFunDefs methods of
   Maybe.Nothing -> throw $ NoteExcp "{{getRequireBehavior}}: parse parseFunDefs methods -> Nothing"
   Just (extDeclList,_) ->
     let getFunExtDecl :: Maybe ExternalDeclaration

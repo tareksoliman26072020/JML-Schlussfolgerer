@@ -20,28 +20,20 @@ which gives:
 ```haskell
 Just (
   FunDef {funModifier = [Public],
-          funDecl = FunCallStmt {funCall = FunCallExpr {
-                    funName = VarExpr {varType = Just (BuiltInType Int),
-                                       varObj = [], varName = "increaseByFour"},
-                    funArgs = [VarExpr {varType = Just (BuiltInType Int),
-                                        varObj = [], varName = "x"}]}},
+          funDecl = FunCallStmt {funCall = FunCallExpr {funName = VarExpr {varType = Just (BuiltInType Int),
+                                                                           varObj = [],
+                                                                           varName = "foo"
+                                                                          },
+                                                        funArgs = []
+                                                       }
+                                },
           throws = Nothing,
-          funBody = CompStmt {statements = [
-                    AssignStmt {varModifier = [],
-                                assign = AssignExpr {assEleft = VarExpr {varType = Just (BuiltInType Int), varObj = [], varName = "y"},
-                                                     assEright = BinOpExpr {expr1 = VarExpr {varType = Nothing, varObj = [], varName = "x"},
-                                                                            binOp = Plus,
-                                                                            expr2 = IntLiteral 4}}},
-                    AssignStmt {varModifier = [],
-                                assign = AssignExpr {assEleft = VarExpr {varType = Nothing, varObj = [], varName = "z"},
-                                                     assEright = IntLiteral 0}},
-                    ReturnStmt {returnS = Just (VarExpr {varType = Nothing,
-                                                         varObj = [],
-                                                         varName = "y"})}]}},
-  "")
+          funBody = CompStmt {statements = [ReturnStmt {returnS = Just (IntLiteral 666)}]}
+         },
+"")
 ```
 
-This is done as the following: store the java method as a string, then pass it as an argument: `parse parseFunDef method`
+This is done as the following: store the java method as a string, then pass it as an argument: `runStateT parseFunDef "public int foo(){return 666;}"`
 
 ---
 ### Examples for JML:
@@ -127,7 +119,7 @@ public int boo27(int i){
 }
 ```
 
-this is done as the following: sage the method as a string, then call: `getRequireBehavior False method "boo27"`
+this is done as the following: pass the source code as a java file to stack `stack exec JML-Schlussfolgerer-exe test.java`
 
 ---
 The tool is useable and can be utilied

@@ -7,6 +7,7 @@ import ParseExpressions
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.State(runStateT)
 import Data.Char(isAlphaNum,isSpace,isDigit)
 import Data.List.Split(splitOn)
 import Data.List(isPrefixOf,(\\),elemIndices,isInfixOf,foldl')
@@ -49,7 +50,7 @@ parseCondStmt = do
   if isNothing maybeState1 then failure
   else do
     let ifBody = init $ tail $ fromJust maybeState1
-        ifBodyParsed = parse (parseCompStmt ";") ifBody 
+        ifBodyParsed = runStateT (parseCompStmt ";") ifBody
     newState (state1 \\ fromJust maybeState1)
     token "else"
     state2 <- getState'
@@ -57,7 +58,7 @@ parseCondStmt = do
     if isNothing maybeState2 then failure
     else do
       let elseBody = init $ tail $ fromJust maybeState2
-          elseBodyParsed = parse (parseCompStmt ";") elseBody
+          elseBodyParsed = runStateT (parseCompStmt ";") elseBody
       newState (state2 \\ fromJust maybeState2)
       return $ CondStmt {condition = cond,
                          siff = fst (fromMaybe (CompStmt [],"") ifBodyParsed),
@@ -73,9 +74,9 @@ parseFor = do
   state <- takeUntilChar '{'
   guard(bracesClosed '(' ')' state)
   let forDeclList = splitOn ";" $ init $ tail state
-      accs  = fst $ fromJust $ parse (parseCompStmt ";") (refine (forDeclList !! 0) ++ ";")
-      condd = fst $ fromJust $ parse (parseBinOp ";") (forDeclList !! 1 ++ ";")
-      steps = fst $ fromJust $ parse (parseCompStmt ";") (refine (forDeclList !! 2) ++ ";")
+      accs  = fst $ fromJust $ runStateT (parseCompStmt ";") (refine (forDeclList !! 0) ++ ";")
+      condd = fst $ fromJust $ runStateT (parseBinOp ";") (forDeclList !! 1 ++ ";")
+      steps = fst $ fromJust $ runStateT (parseCompStmt ";") (refine (forDeclList !! 2) ++ ";")
   state2 <- getState'
   let body = takeUntilBracesClosed state2 '{' '}'
   if isNothing body then failure
@@ -98,7 +99,7 @@ parseWhile = do
   token "while"
   state <- takeUntilChar '{'
   guard(bracesClosed '(' ')' state)
-  let cond = fst $ fromJust $ parse (parseBinOp ";" <|> parseBool <|> parseUnOp ";") $ (tail $ init $ state) ++ ";"
+  let cond = fst $ fromJust $ runStateT (parseBinOp ";" <|> parseBool <|> parseUnOp ";") $ (tail $ init $ state) ++ ";"
   token "{"
   body <- parseCompStmt ";"
   token "}"
@@ -145,26 +146,26 @@ parseTryCatch = do
   where
     f1 :: String -> String -> String -> Maybe Statement
     f1 tryy catch1 catch2 =
-      let x1 = parse (parseCompStmt ";") tryy
+      let x1 = runStateT (parseCompStmt ";") tryy
           x2 = f3
-          x3 = parse (parseCompStmt ";") catch2
+          x3 = runStateT (parseCompStmt ";") catch2
           no1 = isNothing x3 && null catch2
           no2 = isNothing x3 && not (null catch2)
           empty = CompStmt []
           cb = if no1 then empty else fst $ fromJust x3
-      in if no2 && (any isNothing [x1,x3] || isNothing (parse x2 catch2)) then Nothing
+      in if no2 && (any isNothing [x1,x3] || isNothing (runStateT x2 catch2)) then Nothing
          else Just $ TryCatchStmt
            {tryBody = fst $ fromJust x1,
-            catchExcp = fst $ fromJust $ parse x2 catch1,
+            catchExcp = fst $ fromJust $ runStateT x2 catch1,
             catchBody = cb,
             finallyBody = empty}
     
     f2 :: String -> String -> String -> String -> Maybe Statement
     f2 tryy catch1 catch2 finally =
-      let x1 = parse (parseCompStmt ";") tryy
+      let x1 = runStateT (parseCompStmt ";") tryy
           x2 = f3
-          x3 = parse (parseCompStmt ";") catch2
-          x4 = parse (parseCompStmt ";") finally
+          x3 = runStateT (parseCompStmt ";") catch2
+          x4 = runStateT (parseCompStmt ";") finally
           no1_1 = isNothing x3 && null catch2
           no1_2 = isNothing x3 && not (null catch2)
           no2_1 = isNothing x4 && null finally
@@ -173,11 +174,11 @@ parseTryCatch = do
           cb = if no1_1 then empty else fst $ fromJust x3
           fb = if no2_1 then empty else fst $ fromJust x4
       in if no1_2 && no2_2 &&
-            (any isNothing [x1,x3,x4] || isNothing (parse x2 catch2)) then Nothing
+            (any isNothing [x1,x3,x4] || isNothing (runStateT x2 catch2)) then Nothing
          else
            Just $ TryCatchStmt
              {tryBody = fst $ fromJust x1,
-              catchExcp = fst $ fromJust $ parse x2 catch1,
+              catchExcp = fst $ fromJust $ runStateT x2 catch1,
               catchBody = cb,
               finallyBody = fb}
     

@@ -1,21 +1,30 @@
 module Main where
 
 import Examples
-import ParseExpressions
-import ParseStatements
 import Parser
-import PrimitiveFunctionality
-import Data.Char
-import Data.Maybe
-import Control.Applicative
-import Types
-import Data.List
-import Data.List.Split(splitOn)
 import ParseExternalDeclarations
-import ToJML
-import JMLTypes
-import RefineParsed
-import Control.Exception(throw)
+import Control.Monad.State(StateT(..))
+import ToJML(jmlify)
+import Data.List(isInfixOf)
+import Data.List.Split(splitOn)
+import System.Environment(getArgs)
+import Text.Printf(printf)
 
-main :: IO ()
-main = putStrLn $ show $ fst $ fromJust $ parse parseFunDef example75
+main :: IO()
+--main = putStr $ jmlify example107
+main = do
+  path <- getArgs
+  inp <- readFile (head path)
+  let res = jmlify inp
+  let newFilePath = editFileName $ head path
+  let line = replicate (16 + length newFilePath) '-'
+  writeFile newFilePath res
+  putStrLn res
+  putStrLn $ printf "|%s|\n|%s|\nFile is created: %s\n|%s|\n|%s|" line line newFilePath line line
+  where
+    editFileName :: FilePath -> FilePath
+    editFileName path
+      | isInfixOf ".java" path =
+          let splitted = splitOn ".java" path
+          in head splitted ++ "_JML" ++ ".java"
+      | otherwise = path ++ "_JML"

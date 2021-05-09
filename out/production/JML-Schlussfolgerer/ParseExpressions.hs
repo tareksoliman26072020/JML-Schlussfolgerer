@@ -11,6 +11,7 @@ import Data.List.Split(splitOn)
 import Data.List(isPrefixOf,(\\),elemIndices)
 import Data.Maybe(fromJust,fromMaybe,isJust,isNothing)
 import Data.Foldable(asum)
+import Control.Monad.State (runStateT)
     
 --parseLiteral :: Parser Expression
 --parseLiteral = whitespace_linebreak *> many (satisfy (not.isSpace)) >>= return . Literal
@@ -37,8 +38,8 @@ parseVariableExpr strr = do
   res <- some(takeUntilFirstOccurrence strr)
   let strToParse = callFunUntil ((/=' ') . last) init $
                      f1 $ removeInfixDublicates ' ' (dropWhile isSpace res)
-      Just (x,_) = if length (elemIndices ' ' strToParse) == 1 then parse f2 strToParse
-                   else parse f3 strToParse
+      Just (x,_) = if length (elemIndices ' ' strToParse) == 1 then runStateT f2 strToParse
+                   else runStateT f3 strToParse
   return x
   where
     -- adjust string so that unexcepted whitespaces are eliminated
@@ -81,7 +82,7 @@ parseBinOp :: String -> Parser Expression
 parseBinOp strr = do
   whitespace_linebreak
   expr <- (many $ takeUntilFirstOccurrence strr)
-  let x = parse res (expr++";")
+  let x = runStateT res (expr++";")
   if isNothing x then failure
   else return $ fst $ fromJust x
   where
@@ -160,7 +161,7 @@ parseFunCallExpr :: String -> Parser Expression
 parseFunCallExpr strr = do
   whitespace_linebreak
   namee <- many $ satisfy(\ch-> ch /= ' ' && ch /= '(')--parseVariableExpr "("
-  let name = parse (parseVariableExpr "(") (namee++"(")
+  let name = runStateT (parseVariableExpr "(") (namee++"(")
   if isNothing name then failure
   else do
     char '('
@@ -174,9 +175,9 @@ parseFunCallExpr strr = do
     f :: String -> Expression
     f str =
       let parsing1 = parseBinOp "" <|> parseUnOp "" <|> parseInt <|> parseString <|> parseBool <|> parseChar <|> parseArray
-          parsed   = parse parsing1 str <|>
-                     parse (parseFunCallExpr ";") (str++";") <|>
-                     parse (parseVariableExpr ";") (str++";")
+          parsed   = runStateT parsing1 str <|>
+                     runStateT (parseFunCallExpr ";") (str++";") <|>
+                     runStateT (parseVariableExpr ";") (str++";")
       in fst $ fromJust parsed
     
     -- if False, then this is not a function
@@ -199,7 +200,7 @@ parseFunCallExpr strr = do
 parseCondExpr :: Parser Expression
 parseCondExpr = do
   to_1 <- takeUntilChar '?'
-  let _1 = fst $ fromJust $ parse (parseBinOp "") to_1
+  let _1 = fst $ fromJust $ runStateT (parseBinOp "") to_1
   whitespace_linebreak *> char '?' <* whitespace_linebreak
   _2 <- parseCondExpr <|>
         parseInt <|> parseBool <|> parseChar <|> parseString <|>
@@ -238,7 +239,7 @@ parseAssignExpr = do
   whitespace_linebreak
   state <- getState'
   expr <- takeUntilChar ';'
-  let parsed = parse parseAssignExpr' (expr ++ ";")
+  let parsed = runStateT parseAssignExpr' (expr ++ ";")
   if isNothing parsed then failure
   else newState (state \\ expr) *> return (fst $ fromJust parsed)
   where

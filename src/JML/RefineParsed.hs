@@ -3,6 +3,7 @@ module RefineParsed where
 import Types
 import Prelude hiding(negate)
 import Control.Exception(throw)
+import Control.Monad.State(runStateT)
 import Data.Maybe(isNothing, fromJust, isJust)
 import ParseExternalDeclarations
 import Parser
@@ -48,7 +49,7 @@ getFunLocalVariables (FunDef _ (FunCallStmt (FunCallExpr _ funArgs)) _ funBody)
 --getFunLocalVariables _ = throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -/> FunDef"
 
 getUnparsedFunction :: String -> String -> String
-getUnparsedFunction methods seeked = fst $ fromJust $ parse getIt methods
+getUnparsedFunction methods seeked = fst $ fromJust $ runStateT getIt methods
   where
     getIt :: Parser String
     getIt = do
@@ -65,7 +66,7 @@ getUnparsedFunction methods seeked = fst $ fromJust $ parse getIt methods
 
 getFunsNames :: String -> [String]
 getFunsNames methods =
-  let parsed = parse parseFunDefs methods
+  let parsed = runStateT parseFunDefs methods
   in if isNothing parsed || (isJust parsed && (not $ null $ snd $ fromJust parsed))
        then throw $ NoteExcp "{{getFunctions}}: parsed == Nothing || snd parsed /= null"
      else

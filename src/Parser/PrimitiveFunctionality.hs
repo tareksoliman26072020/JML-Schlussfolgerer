@@ -6,16 +6,17 @@ import Types
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.State(StateT(StateT),runStateT)
 import Data.List (uncons, isPrefixOf, (\\), isInfixOf, elemIndices)
 import Data.Char (isSpace,toLower)
 import Data.List.Split(splitOn)
 
 -- | Parser, der ein Zeichen der Eingabe konsumiert
 item :: Parser Char
-item = Parser uncons
+item = StateT uncons
 
 item' :: Parser Char
-item' = Parser $ \case str | null str -> Nothing; str@(x:_) -> Just(x,str)
+item' = StateT $ \case str | null str -> Nothing; str@(x:_) -> Just(x,str)
 
 -- | Parser, der ein Zeichen der Eingabe konsumiert,
 -- sollte p für dieses Zeichen halten. Ansonsten schlägt das Parsieren fehl.
@@ -25,35 +26,35 @@ satisfy p = item >>= \c -> if p c then pure c else failure
 -- parse (many $ takeUntilFirstOccurrence "==") "xxxx ==" ~~> 
 --   Just ("xxxx"," ==")
 takeUntilFirstOccurrence :: String -> Parser Char
-takeUntilFirstOccurrence strr = {-item >>= \c -> -}Parser $ \str ->
+takeUntilFirstOccurrence strr = {-item >>= \c -> -}StateT $ \str ->
   if not (isInfixOf strr str) then Nothing else
   if isPrefixOf strr str then Nothing
   else Just(head str,tail str)
 
 takeUntilLastOccurrence :: String -> Parser Char
-takeUntilLastOccurrence strr = Parser $ \str ->
+takeUntilLastOccurrence strr = StateT $ \str ->
   if (not $ isInfixOf strr str) ||
      ((not $ null str) && (not $ isInfixOf strr (tail str))) then Nothing
   else Just(head str,tail str)
 
 isSubString :: String -> Parser Bool
-isSubString strr = Parser $ \str ->
+isSubString strr = StateT $ \str ->
   Just(isInfixOf strr str,"")
   
 getState :: Parser a -> Parser (a,String)
-getState parser = Parser $ \str -> case parse parser str of
+getState parser = StateT $ \str -> case runStateT parser str of
   Nothing      -> Nothing
   Just(a,rest) -> Just((a,rest),rest)
 
 getState' :: Parser String
-getState' = Parser (Just . join (,))
+getState' = StateT (Just . join (,))
 --getState' = Parser $ \str -> (str,str)
 
 getStatePrefix :: Parser Char
-getStatePrefix = Parser $ \str -> case null str of True -> Nothing; _ -> Just(head str,str)
+getStatePrefix = StateT $ \str -> case null str of True -> Nothing; _ -> Just(head str,str)
 
 newState :: String -> Parser String
-newState str = Parser $ \_ -> Just(str,str)
+newState str = StateT $ \_ -> Just(str,str)
 
 -- | Parser, der nur c parsiert und ansonsten fehlschlägt
 char :: Char -> Parser Char
@@ -79,30 +80,32 @@ token :: String -> Parser String
 token s = whitespace_linebreak *> keyword s <* whitespace_linebreak
 
 takeUntilChar :: Char -> Parser String
-takeUntilChar ch = Parser $ \str ->
+takeUntilChar ch = StateT $ \str ->
   if notElem ch str then Nothing
   else let splitted = splitOn [ch] str
        in Just(head splitted,str \\ head splitted)
 
 isPrefix :: String -> Parser Bool
-isPrefix strr = Parser $ \str ->
+isPrefix strr = StateT $ \str ->
   Just(isPrefixOf strr str,"")
 
 isPrefix' :: String -> Parser Bool
-isPrefix' strr = whitespace_linebreak *> Parser (\str ->
+isPrefix' strr = whitespace_linebreak *> StateT (\str ->
   Just(isPrefixOf strr str,str))
 
 isInfix' :: String -> Parser Bool
-isInfix' strr = Parser $ \str -> Just(isInfixOf strr str,str)
+isInfix' strr = StateT $ \str -> Just(isInfixOf strr str,str)
   
+{-
 transform :: (a -> b) -> Parser a -> Parser b
-transform f (Parser p) = Parser $ \str -> case p str of
+transform f (StateT p) = Parser $ \str -> case p str of
   Nothing        -> Nothing
   Just (x, rest) -> Just (f x,rest)
+-}
 
 -- take ch1 from str before reaching ch2 in str
 takeOnlyIfBefore :: Char -> Char -> Parser String
-takeOnlyIfBefore ch1 ch2 = Parser $ \str -> case elem ch2 str of
+takeOnlyIfBefore ch1 ch2 = StateT $ \str -> case elem ch2 str of
   True  ->
     let first1 = head $ splitOn [ch2] str
         rest2  = last $ splitOn [ch2] str
@@ -118,7 +121,7 @@ empty :: Parser String
 empty = return ""
 
 elemInState :: Char -> Parser a -> Parser Bool
-elemInState ch p = Parser $ \str -> case parse p str of
+elemInState ch p = StateT $ \str -> case runStateT p str of
   Nothing -> Just(False,"")
   Just(_,str2) -> Just(elem ch str2,"")
 

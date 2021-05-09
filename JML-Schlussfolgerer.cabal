@@ -60,6 +60,7 @@ executable JML-Schlussfolgerer-exe
       JML-Schlussfolgerer
     , base >=4.7 && <5
     , split
+    , mtl
   default-language: Haskell2010
 
 test-suite JML-Schlussfolgerer-test
