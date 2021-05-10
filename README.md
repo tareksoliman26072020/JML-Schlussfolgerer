@@ -7,12 +7,9 @@ this project is a software suite written completely in haskell, and it includes 
 ### Examples for the utility of the parser
 The following java method will be fed into a stateful monadic funcion in haskell to be parsed
 ```java
-public int increaseByFour(int x){
-    int y = x + 4;
-    z = 0;
-    return y;
+public int foo(){
+    return 666;
 }
-
 ```
 
 which gives:
