@@ -1,4 +1,4 @@
-module Parser where
+module Parser.Parser where
 
 import Control.Monad.State(StateT(..))
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module JMLTypes where
+module JML.JMLTypes where
 
-import Types(Exception,Expression(..),NotatedException(..))
+import Parser.Types(Exception,Expression(..),NotatedException(..))
 import Prelude hiding(Maybe(..))
 import Text.Printf
 import Data.List(foldl1',isInfixOf)

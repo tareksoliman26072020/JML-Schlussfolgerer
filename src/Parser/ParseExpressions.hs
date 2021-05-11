@@ -1,8 +1,8 @@
-module ParseExpressions where
+module Parser.ParseExpressions where
 
-import Types
-import Parser
-import PrimitiveFunctionality
+import Parser.Types
+import Parser.Parser
+import Parser.PrimitiveFunctionality
 
 import Control.Applicative
 import Control.Monad
@@ -12,7 +12,7 @@ import Data.List(isPrefixOf,(\\),elemIndices)
 import Data.Maybe(fromJust,fromMaybe,isJust,isNothing)
 import Data.Foldable(asum)
 import Control.Monad.State (runStateT)
-    
+
 --parseLiteral :: Parser Expression
 --parseLiteral = whitespace_linebreak *> many (satisfy (not.isSpace)) >>= return . Literal
 
@@ -51,7 +51,7 @@ parseVariableExpr strr = do
             | not (null rest) && (x == '.' || x == '<') && isSpace (head rest) = foo (tail rest) (res ++ [x])
             | otherwise = foo rest (res ++ [x])
       in foo str ""
-      
+
     -- parse to expression for VarExpr
     f2 :: Parser Expression
     f2 = do
@@ -63,7 +63,7 @@ parseVariableExpr strr = do
                         varObj = if isNothing maybeObjs then []
                                  else splitOn "." (fromJust maybeObjs),
                         varName = name}
-                        
+
     f3 :: Parser Expression
     f3 = do
       maybeObjs <- optional(some $ takeUntilLastOccurrence ".")
@@ -74,7 +74,7 @@ parseVariableExpr strr = do
                                  else splitOn "." (fromJust maybeObjs),
                         varName = name}
       --return $ StringLiteral "meow"
-      
+
 
 -- BinOpExpr {expr1 :: Expression, binOp :: BinOp, expr2 :: Expression}
 -- data BinOp = Plus | Mult | Minus | Div | LessEq | Eq | And | Or deriving (Eq, Show)
@@ -97,7 +97,7 @@ parseBinOp strr = do
                  parseFunCallExpr ";" <|> parseUnOp ";" <|> parseVariableExpr ";"
         --optional(token strr)
         return $ BinOpExpr {expr1 = exp1, binOp = toBin binop, expr2 = exp2}
-        
+
 parseUnOp :: String -> Parser Expression
 parseUnOp strr = do
   whitespace_linebreak
@@ -140,7 +140,7 @@ parseString = do
 
 parseNull :: Parser Expression
 parseNull = fmap (const Null) (token "null")
-  
+
 -- ArrayExpr {arrName :: Expression, index :: Expression}
 -- TODO: return to change idx
 parseArray :: Parser Expression
@@ -179,7 +179,7 @@ parseFunCallExpr strr = do
                      runStateT (parseFunCallExpr ";") (str++";") <|>
                      runStateT (parseVariableExpr ";") (str++";")
       in fst $ fromJust parsed
-    
+
     -- if False, then this is not a function
     -- this puts into consideration whether there are functions passed as arguments
     f2 :: String -> Bool
@@ -187,7 +187,7 @@ parseFunCallExpr strr = do
       if r=='(' then l+1 else
       if r==')' then l-1
       else l) 1 str == 0
-    
+
     -- remove the outer last bracet of the function
     f3 :: String -> String
     f3 str = f3' str "" where

@@ -1,13 +1,13 @@
 {-# Language LambdaCase,NamedFieldPuns #-}
-module RefineParsed where
-import Types
+module JML.RefineParsed where
+import Parser.Types
 import Prelude hiding(negate)
 import Control.Exception(throw)
 import Control.Monad.State(runStateT)
 import Data.Maybe(isNothing, fromJust, isJust)
-import ParseExternalDeclarations
-import Parser
-import PrimitiveFunctionality
+import Parser.ParseExternalDeclarations
+import Parser.Parser
+import Parser.PrimitiveFunctionality
 import Data.List.Split(splitOn)
 import Text.Printf
 
@@ -18,7 +18,7 @@ bFilter :: (a -> BBool) -> [a] -> [a]
 bFilter f [] = []
 bFilter f (x:rest)
   | f x == BTrue = x : bFilter f rest
-  | otherwise    = bFilter f rest 
+  | otherwise    = bFilter f rest
 -}
 
 findParsedFunction :: String -> [ExternalDeclaration] -> Maybe ExternalDeclaration
@@ -91,10 +91,10 @@ getCompStmtLocalVariables (CompStmt stmtList) = filter (/= "") (map f1 stmtList)
     f1 (VarStmt var) = f2 var
     f1 (AssignStmt _ assign) = f2 assign
     f1 _                     = ""
-    
+
     --From VarStmt and AssignStmt an Expression is presented.
     --We want the variable name presented in this Expression
-    --to be added to the list of local variable list 
+    --to be added to the list of local variable list
     f2 :: Expression -> String
     f2 (VarExpr varType _ varName) = if isNothing varType then "" else varName
     f2 (ArrayExpr arrName _)       = f2 arrName
@@ -125,7 +125,7 @@ negate (BinOpExpr expr1 binOp expr2) =
 --UnOpExpr {unOp :: UnOp, expr :: Expression}
 negate (UnOpExpr _ expr) = expr
 negate expr = throw $ NoteExcp $ printf "{{negate}}: {{invalid Expression}}:\n %s" (show expr)
-  
+
 appendBoolExprRight :: Expression -> Expression -> Expression
 --BinOpExpr {expr1 :: Expression, binOp :: BinOp, expr2 :: Expression}
 appendBoolExprRight expr1 expr2 = BinOpExpr expr1 And expr2

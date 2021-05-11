@@ -1,10 +1,10 @@
-module ParseExternalDeclarations where
+module Parser.ParseExternalDeclarations where
 
-import Types
-import Parser
-import PrimitiveFunctionality
-import ParseExpressions
-import ParseStatements
+import Parser.Types
+import Parser.Parser
+import Parser.PrimitiveFunctionality
+import Parser.ParseExpressions
+import Parser.ParseStatements
 
 import Control.Applicative
 import Control.Monad
@@ -66,7 +66,7 @@ parseFunDef = do
         state <- getState'
         newState $ init state
         finish maybeModifier funDecll (Just $ toException excp)
-                         
+
     finish :: Maybe [Modifier] -> Statement -> Maybe Exception -> Parser ExternalDeclaration
     finish maybeModifier funDecll maybeException = do
       body <- parseCompStmt ";"
@@ -74,7 +74,7 @@ parseFunDef = do
                        funDecl     = funDecll,
                        throws      = maybeException,
                        funBody     = body}
-      
+
 
 parseFunDecl :: Parser Statement
 parseFunDecl = do
