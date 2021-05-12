@@ -1,6 +1,7 @@
 module Parser.ParseExpr where
 
 import Data.Char
+import Data.List (nub)
 import Parser.Types
 
 import Text.ParserCombinators.Parsec
@@ -21,8 +22,23 @@ idCh c = isAlphaNum c || c `elem` "$_"
 idChar :: Parser Char
 idChar = satisfy idCh
 
+keywords :: [String]
+keywords = words
+   $ "abstract   continue   for          new         switch"
+  ++ "assert     default    if           package     synchronized"
+  ++ "boolean    do         goto         private     this"
+  ++ "break      double     implements   protected   throw"
+  ++ "byte       else       import       public      throws"
+  ++ "case       enum       instanceof   return      transient"
+  ++ "catch      extends    int          short       try"
+  ++ "char       final      interface    static      void"
+  ++ "class      finally    long         strictfp    volatile"
+  ++ "const      float      native       super       while"
+
 ident :: Parser String
-ident = skip $ many1 idChar
+ident = do
+  i <- many1 idChar
+  if i `elem` keywords then unexpected $ "keyword: " ++ i else skip (return i)
 
 intLit :: Parser Int
 intLit = do
@@ -45,26 +61,54 @@ javaLit = IntLiteral <$> intLit
 skipChar :: Char -> Parser Char
 skipChar = skip . char
 
+parenExpr :: Parser Expression
+parenExpr = skipChar '(' *> parseExpr <* skipChar ')'
+
 primExpr :: Parser Expression
 primExpr = skip javaLit
   <|> UnOpExpr NotOp <$> (skipChar '!' *> primExpr)
-  <|> skipChar '(' *> parseExpr <* skipChar ')'
+  <|> parenExpr
   <|> Null <$ keyword "null"
   <|> BoolLiteral True <$ keyword "true"
   <|> BoolLiteral False <$ keyword "false"
   <|> parseArray
 
--- do not parse leading Type
+modifiers :: [Modifier]
+modifiers =
+  [ Static
+  , Public
+  , Private
+  , Protected
+  , Final
+  , Abstract ]
+
+parseModifiers :: Parser [Modifier]
+parseModifiers = nub <$> many
+  (choice $ map (\ m -> m <$ keyword (map toLower $ show m)) modifiers)
+
+parseVar :: Parser Expression
+parseVar = do
+  t <- parseArrType
+  (mt, i) <- case t of
+    AnyType i Nothing -> do -- i may be the variable not a type
+      m <- optionMaybe ident
+      case m of
+        Just j -> pure (Just t, j)
+        Nothing -> pure (Nothing, i)
+    _ -> do
+      i <- ident
+      pure (Just t, i)
+  q <- many $ skipChar '.' *> ident
+  pure $ VarExpr mt q i
+
 parseOptFunCall :: Parser Expression
 parseOptFunCall = do
-  s <- ident
+  v <- parseVar
   l <- optionMaybe
     $ skipChar '(' *> sepBy parseExpr (skipChar ',') <* skipChar ')'
-  case l of
-    Just args -> pure $ FunCallExpr (VarExpr Nothing [] s) args
-    _ -> do
-      l <- many $ skipChar '.' *> ident
-      pure $ VarExpr Nothing l s
+  pure $ case l of
+    Just args -> FunCallExpr v args
+    _ -> v
 
 parseArray :: Parser Expression
 parseArray = do
@@ -72,8 +116,8 @@ parseArray = do
   l <- optionMaybe
     $ skipChar '[' *> parseExpr <* skipChar ']'
   pure $ case l of
-    Just arg -> ArrayExpr e $ Just arg
-    _ -> e
+    Nothing -> e
+    _ -> ArrayExpr e l
 
 binOps :: [BinOp]
 binOps = [ Plus, Mult, Minus, Div, Mod, Less, LessEq, Greater, GreaterEq
@@ -83,15 +127,17 @@ parseBinOp :: Parser BinOp
 parseBinOp =
   choice $ map (\ a -> a <$ keyword (filter (/= ' ') $ show a)) binOps
 
+parseBinRight :: Parser (BinOp, Expression)
+parseBinRight = do
+  o <- parseBinOp
+  e <- primExpr
+  pure (o, e)
+
 parseBinExpr :: Parser Expression
 parseBinExpr = do
   e1 <- primExpr
-  m <- optionMaybe parseBinOp
-  case m of
-    Just o -> do
-      e2 <- parseBinExpr
-      pure $ BinOpExpr e1 o e2
-    _ -> pure e1
+  l <- many parseBinRight
+  pure $ foldl (\ a (o, e) -> BinOpExpr a o e) e1 l
 
 parseCondExpr :: Parser Expression
 parseCondExpr = do
@@ -106,7 +152,7 @@ parseCondExpr = do
 
 parseAssign :: Parser Expression
 parseAssign = do
-  e1 <- try $ parseArray <* skipChar '='
+  e1 <- try $ parseArray <* keyword "="
   AssignExpr e1 <$> parseExpr
 
 parseReturn :: Parser Expression
@@ -114,9 +160,7 @@ parseReturn = keyword "return" *> (ReturnExpr <$> optionMaybe parseExpr)
 
 parseExcp :: Parser Expression
 parseExcp = do
-  keyword "throw"
-  keyword "new"
-  i <- ident
+  i <- keyword "throw" *> keyword "new" *> ident
   ExcpExpr (UserDefException i) <$> optionMaybe
     (skipChar '(' *> skip stringLit <* skipChar ')')
 
@@ -133,15 +177,13 @@ parseBaseType =
 refType :: Parser (Type Types)
 refType = do
   i <- ident
-  AnyType i <$> optionMaybe (skipChar '<' *> refType <* skipChar '>')
+  AnyType i <$> optionMaybe (try $ skipChar '<' *> refType <* skipChar '>')
 
 parseType :: Parser (Type Types)
-parseType =
-  BuiltInType <$> parseBaseType
-  <|> refType
+parseType = BuiltInType <$> parseBaseType <|> refType
 
 parseArrType :: Parser (Type Types)
 parseArrType = do
   t <- parseType
-  l <- many (skipChar '[' *> skipChar ']')
+  l <- many . try $ skipChar '[' *> skipChar ']'
   pure $ foldr (\ _ r -> ArrayType r) t l
