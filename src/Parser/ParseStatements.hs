@@ -1,9 +1,9 @@
-module ParseStatements where
+module Parser.ParseStatements where
 
-import Types
-import Parser
-import PrimitiveFunctionality
-import ParseExpressions
+import Parser.Types
+import Parser.Parser
+import Parser.PrimitiveFunctionality
+import Parser.ParseExpressions
 
 import Control.Applicative
 import Control.Monad
@@ -24,7 +24,7 @@ parseCompStmt strr = do
     optional (token strr)
     rec <- optional(parseCompStmt strr)
     if isNothing rec then return $ CompStmt [stmt]
-    else 
+    else
       let CompStmt list = fromJust rec
       in return $ CompStmt $ stmt : list
       --return $ CompStmt $ stmt : [fromJust rec]
@@ -65,7 +65,7 @@ parseCondStmt = do
                          selsee = fst (fromMaybe (CompStmt [],"") elseBodyParsed)}
 
 parseFunCallStmt :: String -> Parser Statement
-parseFunCallStmt = liftM FunCallStmt . parseFunCallExpr 
+parseFunCallStmt = liftM FunCallStmt . parseFunCallExpr
 
 -- ForStmt {acc :: Statement, cond :: Expression, step :: Statement, forBody :: Statement}
 parseFor :: Parser Statement
@@ -91,7 +91,7 @@ parseFor = do
   where
     refine :: String -> String
     refine str = (foldl' (\l r -> if r==',' then l++";" else l++[r]) "" str)
-    
+
 
 -- WhileStmt {condition :: Expression, whileBody :: Statement}
 parseWhile :: Parser Statement
@@ -159,7 +159,7 @@ parseTryCatch = do
             catchExcp = fst $ fromJust $ runStateT x2 catch1,
             catchBody = cb,
             finallyBody = empty}
-    
+
     f2 :: String -> String -> String -> String -> Maybe Statement
     f2 tryy catch1 catch2 finally =
       let x1 = runStateT (parseCompStmt ";") tryy
@@ -181,10 +181,10 @@ parseTryCatch = do
               catchExcp = fst $ fromJust $ runStateT x2 catch1,
               catchBody = cb,
               finallyBody = fb}
-    
+
     core :: Maybe [a] -> [a]
     core = tail . init . fromJust
-    
+
     f3 :: Parser (Type Exception)
     f3 = do
       excp <- optional (
@@ -202,7 +202,7 @@ parseTryCatch = do
                 token "RuntimeExceptionException"       <|>
                 token "StringIndexOutOfBoundsException" <|>
                 token "IllegalArgumentException")
-      if isNothing excp then 
+      if isNothing excp then
         fmap (\l -> AnyType {typee = l, generic = Nothing})
           (many $ satisfy (not . isSpace))
       else return $ BuiltInType $ toException $ fromJust excp
@@ -215,7 +215,7 @@ parseReturnStmt = (do
   maybeDone <- optional $ token ";"
   if isJust maybeDone then return $ ReturnStmt Nothing
   else do
-    res <- parseBinOp ";" <|> parseUnOp ";" <|> parseArray <|> parseFunCallExpr ";" <|> 
+    res <- parseBinOp ";" <|> parseUnOp ";" <|> parseArray <|> parseFunCallExpr ";" <|>
            parseInt <|> parseChar <|> parseString <|> parseBool <|> parseNull <|> parseVariableExpr ";"
     optional $ token ";"
     return $ ReturnStmt (Just res)) <|> fmap (ReturnStmt . Just) parseExcp

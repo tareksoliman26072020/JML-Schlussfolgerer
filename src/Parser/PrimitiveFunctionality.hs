@@ -1,8 +1,8 @@
 {-# Language LambdaCase #-}
-module PrimitiveFunctionality where
+module Parser.PrimitiveFunctionality where
 
-import Parser
-import Types
+import Parser.Parser
+import Parser.Types
 
 import Control.Applicative
 import Control.Monad
@@ -23,7 +23,7 @@ item' = StateT $ \case str | null str -> Nothing; str@(x:_) -> Just(x,str)
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy p = item >>= \c -> if p c then pure c else failure
 
--- parse (many $ takeUntilFirstOccurrence "==") "xxxx ==" ~~> 
+-- parse (many $ takeUntilFirstOccurrence "==") "xxxx ==" ~~>
 --   Just ("xxxx"," ==")
 takeUntilFirstOccurrence :: String -> Parser Char
 takeUntilFirstOccurrence strr = {-item >>= \c -> -}StateT $ \str ->
@@ -40,7 +40,7 @@ takeUntilLastOccurrence strr = StateT $ \str ->
 isSubString :: String -> Parser Bool
 isSubString strr = StateT $ \str ->
   Just(isInfixOf strr str,"")
-  
+
 getState :: Parser a -> Parser (a,String)
 getState parser = StateT $ \str -> case runStateT parser str of
   Nothing      -> Nothing
@@ -95,7 +95,7 @@ isPrefix' strr = whitespace_linebreak *> StateT (\str ->
 
 isInfix' :: String -> Parser Bool
 isInfix' strr = StateT $ \str -> Just(isInfixOf strr str,str)
-  
+
 {-
 transform :: (a -> b) -> Parser a -> Parser b
 transform f (StateT p) = Parser $ \str -> case p str of

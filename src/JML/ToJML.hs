@@ -1,18 +1,18 @@
 {-# Language LambdaCase #-}
-module ToJML where
+module JML.ToJML where
 
-import ParseExternalDeclarations
-import JMLTypes
-import Types
-import Parser(Parser,failure)
+import Parser.ParseExternalDeclarations
+import JML.JMLTypes as JMLTypes
+import Parser.Types
+import Parser.Parser(Parser,failure)
 import Control.Monad.State(runStateT)
-import RefineParsed
+import JML.RefineParsed
 import qualified Prelude as Maybe (Maybe(Nothing))
 import Prelude hiding(negate)
 import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
-import PrimitiveFunctionality
+import Parser.PrimitiveFunctionality
 import Data.List.Split(splitOn)
 import Data.List(foldl',isInfixOf,(\\))
 import Data.Either(partitionEithers)
@@ -38,7 +38,7 @@ isPure methods funName = case runStateT parseFunDefs methods of
         --if the function is of void, then it's not pure:
       | isJust varType && fromJust varType == BuiltInType Void   = False
       | otherwise = throw $ NoteExcp "{{isPure}}: one or more cases were not discussed"
-    
+
     -- At this point the function isn't of void.
     -- first argument is the local variables
     -- second argument is funBody
@@ -71,7 +71,7 @@ isPure methods funName = case runStateT parseFunDefs methods of
       --all (process2 localVariables) [tryBody,catchBody,finallyBody]
     process3 localVariables (ReturnStmt Maybe.Nothing) = True
     process3 localVariables (ReturnStmt (Just expression)) = process4 localVariables expression
-    
+
     --evaluate whether the expression is impure
     --the to-be-evaluted expression is the right side of some assignment, or some random expression
     -- first argument: local variables
@@ -134,7 +134,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     process0 :: [Statement] -> [String] -> [String] -> Expression -> Statement -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process0 stmts funArgsLV lv condExpr (CompStmt list) = concatMap (process1 (stmts ++ list) funArgsLV lv condExpr) list
     process0 _ _ _ _ _ = throw $ NoteExcp "{{getRequireBehavior -> process1}}: (-/> CompStmt)"
-    
+
     process1 :: [Statement] -> [String] -> [String] -> Expression -> Statement -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process1 stmts _ lv condExpr (VarStmt expr) = process2 stmts lv condExpr expr
     process1 stmts _ lv condExpr (AssignStmt _ assign) =
@@ -163,7 +163,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
       {-case expr of
         FunCallExpr {funName = VarExpr {varType = Nothing, varObj = [], varName = "boo17"}, funArgs = []} -> throw $ NoteExcp $ printf "190:\n%s" (show condExpr)
         _ ->insertEnsures requires ensures-}
-    
+
     --processing Expressions resulted from process1
     process2 :: [Statement] -> [String] -> Expression -> Expression -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process2 stmts lv condExpr a@(VarExpr (Just _) _ varName) = [(Maybe.Nothing,undefined,Maybe.Nothing)] --TODO: is this right?
@@ -192,14 +192,14 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     process2 _ lv condExpr (ReturnExpr Maybe.Nothing) = throw $ NoteExcp "this should be unreachable"--[(Nothing,JMLExpr condExpr,Nothing)]
     process2 _ lv condExpr (ReturnExpr (Just _)) = throw $ NoteExcp "this should be unreachable"
     process2 _ _ condExpr a = [(Maybe.Nothing,JMLExpr condExpr,Maybe.Nothing)]
-    
+
     assignExists :: [String] -> Expression -> ()
     assignExists lv (VarExpr Maybe.Nothing _ varName)
       | varName `notElem` lv = throw $ NoteExcp $ printf "{{getRequireBehavior -> process2 -> boolExprExists}}: VarExpr _ _ varName: %s does not exist" varName
       | otherwise = ()
     assignExists lv (VarExpr _ _ varName) = ()
     --assignExists lv a = throw $ NoteExcp $ printf "{{beobeobeo}}:\n%s" (show a)
-    
+
     appendOriginalCondExpr :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> String -> Expression -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     appendOriginalCondExpr old funName condExpr =
       let hasFunName :: Expression -> Bool
@@ -226,7 +226,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
          refine (BinOpExpr (BoolLiteral True) And expr2) = expr2
          refine (BinOpExpr expr1 And expr2) = BinOpExpr (refine expr1) And expr2
          refine expr = expr
-    
+
     checkCondition :: [String] -> Expression -> ()
     checkCondition lv expr =
       let exists list = filter (flip notElem lv) list
@@ -250,7 +250,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
             | otherwise = []
           foo lv _ = []
       in (foo lv expr) `seq` ()
-    
+
     insertEnsures :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [Maybe JMLExpr] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     insertEnsures requires ensures = foo requires ensures [] where
       foo :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [Maybe JMLExpr] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
@@ -258,13 +258,13 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
       foo _ [] res = res
       foo ((Maybe.Nothing,b,_):rest) (ens:restt) res = foo rest restt (res ++ [(Maybe.Nothing,b,ens)])
       foo (a:rest) restt res = foo rest restt (res ++ [a])
-      
+
     --this removes post conditions in redundant places
     deleteEnsures :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     deleteEnsures = filter $ \case
       (Maybe.Nothing,_,Just _) -> False
       _                        -> True
-      
+
     attachFunName1 :: String -> [String] -> [String]
     attachFunName1 funName lv = map (\str->funName++"->"++str) lv
 
@@ -279,8 +279,8 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     attachFunName2 funName (TryCatchStmt tryBody catchExcp catchBody finallyBody) =
       TryCatchStmt (attachFunName2 funName tryBody) catchExcp (attachFunName2 funName catchBody) (attachFunName2 funName finallyBody)
     attachFunName2 funName (ReturnStmt Maybe.Nothing) = ReturnStmt Maybe.Nothing
-    attachFunName2 funName (ReturnStmt (Just expr)) = ReturnStmt (Just (attachFunName2' funName expr)) 
-    
+    attachFunName2 funName (ReturnStmt (Just expr)) = ReturnStmt (Just (attachFunName2' funName expr))
+
     attachFunName2' :: String -> Expression -> Expression
     attachFunName2' funName (VarExpr a b varName) = VarExpr a b (funName++"->"++varName)
     attachFunName2' funName (ArrayExpr arrName Maybe.Nothing) = ArrayExpr (attachFunName2' funName arrName) Maybe.Nothing
@@ -294,7 +294,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     attachFunName2' funName (ReturnExpr Maybe.Nothing) = ReturnExpr Maybe.Nothing
     attachFunName2' funName (ReturnExpr (Just expr)) = ReturnExpr (Just $ attachFunName2' funName expr)
     attachFunName2' _ expr = expr
-    
+
     getOriginalFunName :: String -> String
     getOriginalFunName str
       | not (isInfixOf "->" str) = str

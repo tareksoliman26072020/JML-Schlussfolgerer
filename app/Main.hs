@@ -1,10 +1,10 @@
 module Main where
 
 import Examples
-import Parser
-import ParseExternalDeclarations
+import Parser.Parser
+import Parser.ParseExternalDeclarations
 import Control.Monad.State(StateT(..))
-import ToJML(jmlify)
+import JML.ToJML(jmlify)
 import Data.List(isInfixOf)
 import Data.List.Split(splitOn)
 import System.Environment(getArgs)
