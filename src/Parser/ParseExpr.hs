@@ -99,7 +99,8 @@ parseVar = do
       i <- ident
       pure (Just t, i)
   q <- many $ skipChar '.' *> ident
-  pure $ VarExpr mt q i
+  let l = i : q
+  pure . VarExpr mt (init l) $ last l
 
 parseOptFunCall :: Parser Expression
 parseOptFunCall = do
