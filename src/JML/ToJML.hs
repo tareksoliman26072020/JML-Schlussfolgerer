@@ -345,9 +345,9 @@ getEnsures methods stmts funArgs lv a = case a of
     --deal with functions
     process1 :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> String -> String -> [Expression] -> [Maybe JMLExpr]
     process1 re _ _ _ = map (\(_,_,ens)->ens) re
-     {- | isPure methods funName
-        && length re >= 1 = map (\(_,_,ens)->ens) re
-      | otherwise = throw $ NoteExcp $ printf "431:\n%s" (show re)-}
+     {- if isPure methods funName
+        && length re >= 1 then map (\(_,_,ens)->ens) re
+      else throw $ NoteExcp $ printf "431:\n%s" (show re) -}
 
 toJMLs :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [JMLSyntax]
 toJMLs = map f where
