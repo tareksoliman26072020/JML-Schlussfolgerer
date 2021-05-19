@@ -146,8 +146,7 @@ parseCondExpr = do
   case m of
     Just _ -> do
       e2 <- parseExpr <* skipChar ':'
-      e3 <- parseExpr
-      pure $ CondExpr e1 e2 e3
+      CondExpr e1 e2 <$> parseExpr
     _ -> pure e1
 
 parseAssign :: Parser Expression
