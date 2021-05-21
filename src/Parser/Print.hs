@@ -88,7 +88,7 @@ showStmt = \case
   FunCallStmt {funCall} -> showExpr funCall
   TryCatchStmt {tryBody, catchExcp, catchBody, finallyBody} ->
     "try " ++ showStmt tryBody
-    ++ "\ncatch (" ++ showExcpType catchExcp ++ ")\n"
+    ++ "\ncatch (" ++ showExcpType catchExcp ++ ") "
     ++ showStmt catchBody ++ case finallyBody of
       CompStmt [] -> ""
       _ -> "\nfinally " ++ showStmt finallyBody
