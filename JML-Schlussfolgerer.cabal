@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 49e6c1303ced90132785be26ba54681d6a604652d9921fe9356d33a4b9f39964
+-- hash: d82bd064360f72f7b9f136332d5a6f01cb509bc15bf945a9f0046f93b032790c
 
 name:           JML-Schlussfolgerer
 version:        0.1.0.0
@@ -38,6 +38,7 @@ library
       Parser.ParseStatements
       Parser.ParseStmt
       Parser.PrimitiveFunctionality
+      Parser.Print
       Parser.Types
   other-modules:
       Paths_JML_Schlussfolgerer
