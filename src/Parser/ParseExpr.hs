@@ -37,7 +37,7 @@ keywords = words
 
 ident :: Parser String
 ident = do
-  i <- many1 idChar
+  i <- try $ many1 idChar
   if i `elem` keywords then unexpected $ "keyword: " ++ i else skip (return i)
 
 intLit :: Parser Int
