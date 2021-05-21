@@ -32,7 +32,7 @@ isPure methods funName = case runStateT parseFunDefs methods of
     -- and no errors were thrown,
     -- and now it's time to judge whether this function is pure
     process1 :: ExternalDeclaration -> Bool
-    process1 lV@(FunDef _ (FunCallStmt (FunCallExpr (VarExpr varType _ _) _)) _ funBody)
+    process1 lV@(FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr varType _ _) _)) _ funBody)
       | isNothing varType ||
         (isJust varType && fromJust varType /= BuiltInType Void) = process2 (getFunLocalVariables lV) funBody
         --if the function is of void, then it's not pure:
@@ -104,7 +104,7 @@ jmlify sourceCode = fst $ fromJust $ runStateT jmlify_ sourceCode
       state <- getState'
       parsed <- parseFunDef
       rest <- getState'
-      let FunDef modifiers (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
+      let FunDef modifiers _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
           purified_fun
             | isPure sourceCode funName =
                 let fun = fromJust $ takeUntilBracesClosed state '{' '}'
@@ -125,7 +125,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
         getFunExtDecl = findParsedFunction (getOriginalFunName funName) extDeclList
     in case getFunExtDecl of
       Maybe.Nothing -> throw $ NoteExcp $ printf "{{getRequireBehavior}}: searched function:%s wasn't found" funName
-      Just lv@(FunDef _ (FunCallStmt (FunCallExpr VarExpr{} funArgs)) _ funBody) ->
+      Just lv@(FunDef _ _ (FunCallStmt (FunCallExpr VarExpr{} funArgs)) _ funBody) ->
         if not called then refineRes $ process0 [] (fromVarExprToString funArgs) (getFunLocalVariables lv) (BoolLiteral True) funBody
         else refineRes $ process0 [] (attachFunName1 funName $ fromVarExprToString funArgs) (attachFunName1 funName $ getFunLocalVariables lv) (BoolLiteral True) (attachFunName2 funName funBody)
   where

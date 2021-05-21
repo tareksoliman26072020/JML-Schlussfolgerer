@@ -95,6 +95,7 @@ showStmt = \case
   ReturnStmt {returnS} -> "return" ++ maybe "" ((" " ++) . showExpr) returnS
 
 showDecl :: ExternalDeclaration -> String
-showDecl FunDef {funModifier, funDecl, throws, funBody} =
-  showModifiers funModifier ++ showStmt funDecl
+showDecl FunDef {funModifier, isPureFlag, funDecl, throws, funBody} =
+  showModifiers funModifier
+  ++ (if isPureFlag then " /*@ pure @*/ " else "") ++ showStmt funDecl
   ++ maybe "" ((" throws " ++) . showExcp) throws ++ " " ++ showStmt funBody

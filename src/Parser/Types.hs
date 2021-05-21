@@ -54,6 +54,7 @@ data Statement
   deriving (Eq, Show)
 
 data ExternalDeclaration = FunDef {funModifier :: [Modifier],
+                                   isPureFlag :: Bool,
                                    funDecl :: Statement,
                                    throws :: Maybe Exception,
                                    funBody :: Statement} deriving(Eq,Show)

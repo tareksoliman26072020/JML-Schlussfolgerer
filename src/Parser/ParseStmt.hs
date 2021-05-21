@@ -65,7 +65,7 @@ parseExtDecl = do
   l <- parseModifiers
   t <- parseOptFunCall
   e <- optionMaybe $ keyword "throws" *> (UserDefException <$> ident)
-  FunDef l (FunCallStmt t) e <$> parseStmt
+  FunDef l False (FunCallStmt t) e <$> parseStmt
 
 parseDeclList :: Parser [ExternalDeclaration]
 parseDeclList = spaces *> many parseExtDecl <* eof

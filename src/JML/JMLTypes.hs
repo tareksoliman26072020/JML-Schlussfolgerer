@@ -16,7 +16,7 @@ instance Show JMLSyntax where
             "@ normal behavior" ++ "\n" ++
           "  @ requires "   ++ show requires ++ ";\n" ++
           "  @ assignable " ++ show assignable ++ ";\n" ++
-          "  @ ensures " ++ "\\result=" ++ show ensures ++ ";\n" ++
+          "  @ ensures " ++ "\\result = " ++ show ensures ++ ";\n" ++
           "  @"
   show Exceptional_Behavior{requires, signals} = printf(
             "@ exceptional behavior" ++ "\n" ++

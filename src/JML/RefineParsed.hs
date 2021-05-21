@@ -29,8 +29,8 @@ findParsedFunction str list =
      else Nothing
     where
       f :: ExternalDeclaration -> Bool
-      f (FunDef _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName == str
-      f (FunDef _ FunCallStmt{} _ _) = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -> FunCallStmt -> FunCallExpr -/> VarExpr"
+      f (FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName == str
+      f (FunDef _ _ FunCallStmt{} _ _) = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -> FunCallStmt -> FunCallExpr -/> VarExpr"
       f FunDef{} = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -> FunDef -/> FunCallStmt"
       --uncomment this in case of extending ExternalDeclaration:
 --    f _            = throw $ NoteExcp "{{findFunction}}: ExternalDeclaration -/> FunDef"
@@ -40,7 +40,7 @@ findParsedFunction str list =
 --FunCallStmt {funCall :: Expression}
 --VarExpr {varType :: Maybe (Type Types), varObj :: [String], varName :: String}
 getFunLocalVariables :: ExternalDeclaration -> [String]
-getFunLocalVariables (FunDef _ (FunCallStmt (FunCallExpr _ funArgs)) _ funBody)
+getFunLocalVariables (FunDef _ _ (FunCallStmt (FunCallExpr _ funArgs)) _ funBody)
   | null funArgs = getCompStmtLocalVariables funBody
   | otherwise    = case head funArgs of
     VarExpr{} -> map varName funArgs ++ getCompStmtLocalVariables funBody
@@ -56,7 +56,7 @@ getUnparsedFunction methods seeked = fst $ fromJust $ runStateT getIt methods
       state <- getState'
       parsed <- parseFunDef
       rest <- getState'
-      let FunDef modifiers (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
+      let FunDef modifiers _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
       if seeked == funName then
         let fun                 = fromJust $ takeUntilBracesClosed state '{' '}'
             splittedAtModifiers = splitOn (fromModifiers modifiers) fun
@@ -74,7 +74,7 @@ getFunsNames methods =
        in map f extDecls
   where
     f :: ExternalDeclaration -> String
-    f (FunDef _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName
+    f (FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName
     f _ = throw $ NoteExcp "{{getFunctions -> f}}: not parsed the right way"
 
 --At this point: variables passed to the function are already stored

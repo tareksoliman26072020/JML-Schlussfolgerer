@@ -1,7 +1,7 @@
 /*@ normal behavior
   @ requires true;
   @ assignable \nothing;
-  @ ensures \result=5;
+  @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo21(){
   return 5;
@@ -10,7 +10,7 @@ public /*@ pure @*/ int boo21(){
 /*@ normal behavior
   @ requires true;
   @ assignable \nothing;
-  @ ensures \result=5;
+  @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo22(){
   return boo21();
@@ -19,7 +19,7 @@ public /*@ pure @*/ int boo22(){
 /*@ normal behavior
   @ requires true;
   @ assignable \nothing;
-  @ ensures \result=5;
+  @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo22_2(){
   int x = boo21();
@@ -29,7 +29,7 @@ public /*@ pure @*/ int boo22_2(){
 /*@ normal behavior
   @ requires true;
   @ assignable \nothing;
-  @ ensures \result=3 + 5;
+  @ ensures \result = 3 + 5;
   @*/
 public /*@ pure @*/ int boo23(){
   int x = 3 + boo21();
@@ -43,7 +43,7 @@ public /*@ pure @*/ int boo23(){
   @ normal behavior
   @ requires true;
   @ assignable \nothing;
-  @ ensures \result=3 + 6;
+  @ ensures \result = 3 + 6;
   @*/
 public int boo24(){
   int x = 3 + boo25(5);
@@ -57,7 +57,7 @@ public int boo24(){
   @ normal behavior
   @ requires i <= 10;
   @ assignable \nothing;
-  @ ensures \result=6;
+  @ ensures \result = 6;
   @*/
 public int boo25(int i){
   if(i>10){
@@ -71,12 +71,12 @@ public int boo25(int i){
 /*@ normal behavior
   @ requires (boo27->i) >= 0;
   @ assignable \nothing;
-  @ ensures \result=(boo27->i);
+  @ ensures \result = (boo27->i);
   @ also
   @ normal behavior
   @ requires (boo27->i) < 0;
   @ assignable \nothing;
-  @ ensures \result=-1 * (boo27->i);
+  @ ensures \result = -1 * (boo27->i);
   @*/
 public /*@ pure @*/ int boo26(){
   return boo27(5);
@@ -85,12 +85,12 @@ public /*@ pure @*/ int boo26(){
 /*@ normal behavior
   @ requires i >= 0;
   @ assignable \nothing;
-  @ ensures \result=i;
+  @ ensures \result = i;
   @ also
   @ normal behavior
   @ requires i < 0;
   @ assignable \nothing;
-  @ ensures \result=-1 * i;
+  @ ensures \result = -1 * i;
   @*/
 public /*@ pure @*/ int boo27(int i){
   if(i >= 0){
@@ -109,17 +109,17 @@ public /*@ pure @*/ int boo27(int i){
   @ normal behavior
   @ requires x != 3;
   @ assignable \nothing;
-  @ ensures \result=1;
+  @ ensures \result = 1;
   @ also
   @ normal behavior
   @ requires (boo27->i) >= 0;
   @ assignable \nothing;
-  @ ensures \result=(boo27->i);
+  @ ensures \result = (boo27->i);
   @ also
   @ normal behavior
   @ requires (boo27->i) < 0;
   @ assignable \nothing;
-  @ ensures \result=-1 * (boo27->i);
+  @ ensures \result = -1 * (boo27->i);
   @*/
 public int boo28(){
   try{
@@ -139,7 +139,7 @@ public int boo28(){
 /*@ normal behavior
   @ requires (i <= y) && (j == y);
   @ assignable \nothing;
-  @ ensures \result=i;
+  @ ensures \result = i;
   @ also
   @ exceptional behavior
   @ requires ((i <= y) && (j != y)) && (i == y);

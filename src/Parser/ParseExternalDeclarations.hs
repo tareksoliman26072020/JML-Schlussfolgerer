@@ -71,6 +71,7 @@ parseFunDef = do
     finish maybeModifier funDecll maybeException = do
       body <- parseCompStmt ";"
       return $ FunDef {funModifier = fromMaybe [] maybeModifier,
+                       isPureFlag  = False,
                        funDecl     = funDecll,
                        throws      = maybeException,
                        funBody     = body}
@@ -107,7 +108,7 @@ returnFunction seeked = do
   parsed <- optional parseFunDef
   if isNothing parsed then failure
   else do
-    let Just (FunDef _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = parsed
+    let Just (FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = parsed
     rest <- getState'
     if seeked == funName then
       let fun = fromJust $ takeUntilBracesClosed state '{' '}'
