@@ -1,11 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module JML.JMLTypes where
 
-import Parser.Types(Exception,Expression(..),NotatedException(..))
+import Parser.Print(showExpr)
+import Parser.Types(Exception,Expression(..))
 import Prelude hiding(Maybe(..))
 import Text.Printf
-import Data.List(foldl1',isInfixOf)
-import Control.Exception(throw)
 
 data JMLSyntax = Normal_Behavior{requires :: JMLExpr,
                                  assignable :: JMLLiterals,
@@ -28,23 +27,6 @@ instance Show JMLSyntax where
 newtype JMLExpr = JMLExpr Expression deriving Eq
 instance Show JMLExpr where
   show (JMLExpr expr) = showExpr expr where
-    showExpr :: Expression -> String
-    showExpr VarExpr{varObj=[], varName} = case isInfixOf "->" varName of
-      True  -> printf "(%s)" varName
-      False -> varName
-    showExpr VarExpr{varObj, varName} = foldl1' toString varObj ++ varName where
-      toString :: String -> String -> String
-      toString "" str = str
-      toString acc str = printf "%s.%s" acc str
-    showExpr BinOpExpr{expr1, binOp, expr2} = printf "%s%s%s" (showExpr expr1) (show binOp) (showExpr expr2)
-    showExpr UnOpExpr{unOp, expr} = printf "%s%s" (show unOp) (show expr)
-    showExpr (IntLiteral num) | num>=0 = show num
-    showExpr (IntLiteral num) | num<0  = printf "(%d)" num
-    showExpr (BoolLiteral bool) = show bool
-    showExpr (CharLiteral char) = show char
-    showExpr (StringLiteral str) = str
-    showExpr Null = "null"
-    showExpr a = throw $ NoteExcp $ printf "\ninstance Show JMLExpr:\n%s" (show a)
 
 data JMLLiterals = Old
                   | Result
