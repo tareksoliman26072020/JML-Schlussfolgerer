@@ -15,8 +15,8 @@ instance Show BinOp where
   show GreaterEq = ">="
   show Eq        = "=="
   show Neq       = "!="
-  show And       = " && "
-  show Or        = " || "
+  show And       = "&&"
+  show Or        = "||"
 
 data UnOp = NotOp deriving Eq
 instance Show UnOp where

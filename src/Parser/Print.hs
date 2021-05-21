@@ -5,7 +5,6 @@ import Data.Char
 import Data.List
 
 import Parser.Types
-import Parser.ParseStmt
 
 showType :: Type Types -> String
 showType = \case

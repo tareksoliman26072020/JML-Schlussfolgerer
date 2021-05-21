@@ -126,7 +126,7 @@ binOps = [ Plus, Mult, Minus, Div, Mod, Less, LessEq, Greater, GreaterEq
 
 parseBinOp :: Parser BinOp
 parseBinOp =
-  choice $ map (\ a -> a <$ keyword (filter (/= ' ') $ show a)) binOps
+  choice $ map (\ a -> a <$ keyword (show a)) binOps
 
 parseBinRight :: Parser (BinOp, Expression)
 parseBinRight = do
