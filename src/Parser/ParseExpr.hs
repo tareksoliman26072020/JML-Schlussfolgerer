@@ -36,8 +36,10 @@ keywords = words
   ++ "const      float      native       super       while"
 
 ident :: Parser String
-ident = do
-  i <- try $ many1 idChar
+ident = try $ do
+  c <- satisfy (\ c -> isLetter c || c == '_')
+  r <- many idChar
+  let i = c : r
   if i `elem` keywords then unexpected $ "keyword: " ++ i else skip (return i)
 
 intLit :: Parser Int
