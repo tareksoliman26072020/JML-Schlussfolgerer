@@ -29,12 +29,12 @@ instance Show JMLExpr where
   show (JMLExpr expr) = showExpr expr where
 
 data JMLLiterals = Old
-                  | Result
-                  | Forall
-                  | Exists
-                  | Nothing
-                  | Implication
-                  | Equivalence
+                 | Result
+                 | Forall
+                 | Exists
+                 | Nothing
+                 | Implication
+                 | Equivalence
 
 instance Show JMLLiterals where
   show Old = "\\old"

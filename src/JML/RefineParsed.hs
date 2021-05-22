@@ -101,7 +101,7 @@ getCompStmtLocalVariables (CompStmt stmtList) = filter (/= "") (map f1 stmtList)
     --f2 (BinOpExpr expr1 _ _)       = f2 expr1
     f2 (AssignExpr assEleft _)     = f2 assEleft
     f2 _                           = ""
-getCompStmtLocalVariables _                   = throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -> (FunDef _ _ _ (-/>CompStmt))"
+getCompStmtLocalVariables a                   = throw $ NoteExcp $ printf "{{getFunLocalVariables}}: ExternalDeclaration -> (FunDef _ _ _ (-/>CompStmt)): %s" (show a)
 
 --data BinOp = Plus | Mult | Minus | Div | Mod | Less | LessEq | Greater | GreaterEq | Eq | Neq | And | Or
 --this negates an BinOp,UnOp,BoolLiteral expression

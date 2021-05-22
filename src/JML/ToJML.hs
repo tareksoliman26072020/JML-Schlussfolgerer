@@ -1,27 +1,28 @@
-{-# Language LambdaCase #-}
+{-# Language LambdaCase, NamedFieldPuns #-}
 module JML.ToJML where
 
-import Parser.ParseExternalDeclarations
+--import Parser.ParseExternalDeclarations
 import JML.JMLTypes as JMLTypes
 import Parser.Types
-import Parser.Parser(Parser,failure)
-import Control.Monad.State(runStateT)
+--import Parser.Parser(Parser,failure)
+--import Control.Monad.State(runStateT)
 import JML.RefineParsed
 import qualified Prelude as Maybe (Maybe(Nothing))
 import Prelude hiding(negate)
 import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
-import Parser.PrimitiveFunctionality
+--import Parser.PrimitiveFunctionality
 import Data.List.Split(splitOn)
 import Data.List(foldl',isInfixOf,(\\))
-import Data.Either(partitionEithers)
+import Data.Either(partitionEithers, fromRight)
 import Control.Applicative(optional)
+import Parser.Print
+import Parser.ParseStmt
+import Text.ParserCombinators.Parsec
 
-isPure :: String -> String -> Bool
-isPure methods funName = case runStateT parseFunDefs methods of
-  Maybe.Nothing -> throw $ NoteExcp "{{isPure}}: parse parseFunDefs methods -> Nothing"
-  Just (extDeclList,_) ->
+isPure :: [ExternalDeclaration] -> String -> Bool
+isPure extDeclList funName =
     let getFunExtDecl :: Maybe ExternalDeclaration
         getFunExtDecl = findParsedFunction funName extDeclList
     in case getFunExtDecl of
@@ -64,9 +65,9 @@ isPure methods funName = case runStateT parseFunDefs methods of
       let newLocalVariables = localVariables ++ getCompStmtLocalVariables stmtAcc ++ getCompStmtLocalVariables stmtBody
       in process4 newLocalVariables cond && process2 newLocalVariables stmtBody
     process3 localVariables (WhileStmt _ whileBody) = process2 (localVariables ++ getCompStmtLocalVariables whileBody) whileBody
-    process3 localVariables (FunCallStmt (FunCallExpr (VarExpr _ _ varName) _)) = isPure methods varName
+    process3 localVariables (FunCallStmt (FunCallExpr (VarExpr _ _ varName) _)) = isPure extDeclList varName
     process3 localVariables (FunCallStmt FunCallExpr{}) = throw $ NoteExcp "{{isPure -> process3}}: FunCallStmt (FunCallExpr (-/>VarExpr) _)"
-    process3 localVariables FunCallStmt{} = throw $ NoteExcp "{{isPure -> process3}}: FunCallStmt (-/>FunCallExpr)"
+    process3 localVariables a@FunCallStmt{} = throw $ NoteExcp $ printf "{{isPure -> process3}}: FunCallStmt (-/>FunCallExpr): %s" (show a)
     process3 localVariables TryCatchStmt{} = False
       --all (process2 localVariables) [tryBody,catchBody,finallyBody]
     process3 localVariables (ReturnStmt Maybe.Nothing) = True
@@ -83,7 +84,7 @@ isPure methods funName = case runStateT parseFunDefs methods of
     process4 localVariables (ArrayExpr _ index) = throw $ NoteExcp "{{isPure -> process4}}: ArrayExpr (-/> VarExpr) _"
     process4 localVariables (BinOpExpr expr1 _ expr2) = all (process4 localVariables) [expr1,expr2]
     process4 localVariables (UnOpExpr _ expr) = process4 localVariables expr
-    process4 localVariables (FunCallExpr (VarExpr _ _ varName) _) = isPure methods varName
+    process4 localVariables (FunCallExpr (VarExpr _ _ varName) _) = isPure extDeclList varName
     process4 localVariables FunCallExpr{} = throw $ NoteExcp "{{isPure -> process4}}: FunCallExpr (-/> VarExpr) _"
     process4 localVariables (CondExpr eiff ethenn elsee) = all (process4 localVariables) [eiff,ethenn,elsee]
     process4 localVariables (AssignExpr (VarExpr Maybe.Nothing _ varName1) assEright)
@@ -96,6 +97,21 @@ isPure methods funName = case runStateT parseFunDefs methods of
     process4 localVariables (ReturnExpr (Just expr)) = process4 localVariables expr
     process4 _ _ = True
 
+jmlify :: [ExternalDeclaration] -> [([JMLSyntax], ExternalDeclaration)]
+jmlify extDeclList = map f extDeclList where
+  f :: ExternalDeclaration -> ([JMLSyntax], ExternalDeclaration)
+  f extDecl@FunDef{isPureFlag, funDecl=FunCallStmt{funCall=FunCallExpr {funName=VarExpr{varName}}}} =
+    let jmlify_ = toJMLs $ getRequireEnsureBehavior False extDeclList varName
+        purifiedExtDecl = FunDef{funModifier=funModifier extDecl,
+                                 isPureFlag=True,
+                                 funDecl=funDecl extDecl,
+                                 throws=throws extDecl,
+                                 funBody=funBody extDecl}
+    in case isPure extDeclList varName of
+      True -> (jmlify_,purifiedExtDecl)
+      False -> (jmlify_,extDecl)
+
+{-
 jmlify :: String -> String
 jmlify sourceCode = fst $ fromJust $ runStateT jmlify_ sourceCode
   where
@@ -111,20 +127,19 @@ jmlify sourceCode = fst $ fromJust $ runStateT jmlify_ sourceCode
                     splittedAtModifiers = splitOn (fromModifiers modifiers) fun
                 in fromModifiers modifiers ++ " /*@ pure @*/" ++ last splittedAtModifiers
             | otherwise = fromJust $ takeUntilBracesClosed state '{' '}'
-          jml = toJML $ toJMLs $ getRequireBehavior False sourceCode funName
+          jml = toJML $ toJMLs $ getRequireEnsureBehavior False sourceCode funName
       newState rest
       next <- optional jmlify_
       if isNothing next then return $ jml ++ "\n" ++ purified_fun
       else return $ jml ++ "\n" ++ purified_fun ++ "\n\n" ++ fromJust next
+-}
 
-getRequireBehavior :: Bool -> String -> String -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
-getRequireBehavior called methods funName = case runStateT parseFunDefs methods of
-  Maybe.Nothing -> throw $ NoteExcp "{{getRequireBehavior}}: parse parseFunDefs methods -> Nothing"
-  Just (extDeclList,_) ->
+getRequireEnsureBehavior :: Bool -> [ExternalDeclaration] -> String -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
+getRequireEnsureBehavior called extDeclList funName =
     let getFunExtDecl :: Maybe ExternalDeclaration
         getFunExtDecl = findParsedFunction (getOriginalFunName funName) extDeclList
     in case getFunExtDecl of
-      Maybe.Nothing -> throw $ NoteExcp $ printf "{{getRequireBehavior}}: searched function:%s wasn't found" funName
+      Maybe.Nothing -> throw $ NoteExcp $ printf "{{getRequireEnsureBehavior}}: searched function:%s wasn't found" funName
       Just lv@(FunDef _ _ (FunCallStmt (FunCallExpr VarExpr{} funArgs)) _ funBody) ->
         if not called then refineRes $ process0 [] (fromVarExprToString funArgs) (getFunLocalVariables lv) (BoolLiteral True) funBody
         else refineRes $ process0 [] (attachFunName1 funName $ fromVarExprToString funArgs) (attachFunName1 funName $ getFunLocalVariables lv) (BoolLiteral True) (attachFunName2 funName funBody)
@@ -133,7 +148,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     --therefore it's of CompStmt
     process0 :: [Statement] -> [String] -> [String] -> Expression -> Statement -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process0 stmts funArgsLV lv condExpr (CompStmt list) = concatMap (process1 (stmts ++ list) funArgsLV lv condExpr) list
-    process0 _ _ _ _ _ = throw $ NoteExcp "{{getRequireBehavior -> process1}}: (-/> CompStmt)"
+    process0 _ _ _ _ _ = throw $ NoteExcp "{{getRequireEnsureBehavior -> process1}}: (-/> CompStmt)"
 
     process1 :: [Statement] -> [String] -> [String] -> Expression -> Statement -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process1 stmts _ lv condExpr (VarStmt expr) = process2 stmts lv condExpr expr
@@ -158,7 +173,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     process1 stmts _ lv condExpr (ReturnStmt Maybe.Nothing) = [(Maybe.Nothing,JMLExpr condExpr,Maybe.Nothing)]
     process1 stmts funArgs lv condExpr a@(ReturnStmt (Just expr)) =
       let requires = process2 stmts lv condExpr expr
-          ensures  = getEnsures methods stmts funArgs lv expr
+          ensures  = getEnsures extDeclList stmts funArgs lv expr
       in insertEnsures requires ensures
       {-case expr of
         FunCallExpr {funName = VarExpr {varType = Nothing, varObj = [], varName = "boo17"}, funArgs = []} -> throw $ NoteExcp $ printf "190:\n%s" (show condExpr)
@@ -168,7 +183,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     process2 :: [Statement] -> [String] -> Expression -> Expression -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
     process2 stmts lv condExpr a@(VarExpr (Just _) _ varName) = [(Maybe.Nothing,undefined,Maybe.Nothing)] --TODO: is this right?
     process2 _ lv condExpr a@(VarExpr Maybe.Nothing _ varName) =
-      if varName `notElem` lv then throw $ NoteExcp "{{getRequireBehavior -> process2}}: VarExpr _ varName: varName is not a local variable"
+      if varName `notElem` lv then throw $ NoteExcp "{{getRequireEnsureBehavior -> process2}}: VarExpr _ varName: varName is not a local variable"
       else [(Maybe.Nothing,JMLExpr condExpr,Maybe.Nothing)]
     process2 _ lv condExpr a@(ArrayExpr (VarExpr _ _ varName) Maybe.Nothing)
       | varName `elem` lv = [(Maybe.Nothing,JMLExpr condExpr,Just $ JMLExpr a)]
@@ -176,7 +191,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     process2 stmts lv condExpr (BinOpExpr expr1 _ expr2) = process2 stmts lv condExpr expr1 ++ process2 stmts lv condExpr expr2
     process2 stmts lv condExpr (UnOpExpr _ expr) = process2 stmts lv (negate condExpr) expr
     process2 _ lv condExpr (FunCallExpr (VarExpr _ _ varName) _) =
-      let rec = getRequireBehavior True methods varName
+      let rec = getRequireEnsureBehavior True extDeclList varName
       in refineRes $ appendOriginalCondExpr rec varName condExpr
     process2 stmts lv condExpr (CondExpr eiff ethenn elsee) =
       let x1 = process2 stmts lv (appendBoolExprRight condExpr eiff) ethenn
@@ -195,7 +210,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
 
     assignExists :: [String] -> Expression -> ()
     assignExists lv (VarExpr Maybe.Nothing _ varName)
-      | varName `notElem` lv = throw $ NoteExcp $ printf "{{getRequireBehavior -> process2 -> boolExprExists}}: VarExpr _ _ varName: %s does not exist" varName
+      | varName `notElem` lv = throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process2 -> boolExprExists}}: VarExpr _ _ varName: %s does not exist" varName
       | otherwise = ()
     assignExists lv (VarExpr _ _ varName) = ()
     --assignExists lv a = throw $ NoteExcp $ printf "{{beobeobeo}}:\n%s" (show a)
@@ -209,7 +224,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
           hasFunName (VarExpr _ _ varName) = --varName == funName
             let splitIt = last $ init $ splitOn "->" varName
             in splitIt == funName
-          hasFunName expr = False--throw $ NoteExcp $ printf "{{getRequireBehavior -> process2 -> appendOriginalCondExpr}}:\n%s" (show expr)
+          hasFunName expr = False--throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process2 -> appendOriginalCondExpr}}:\n%s" (show expr)
           f :: (Maybe Exception,JMLExpr,Maybe JMLExpr) -> (Maybe Exception,JMLExpr,Maybe JMLExpr)
           f tuple@(one,JMLExpr two,three) | hasFunName two = (one,JMLExpr $ BinOpExpr condExpr And two,three)
           f tuple                                          = tuple
@@ -230,7 +245,7 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
     checkCondition :: [String] -> Expression -> ()
     checkCondition lv expr =
       let exists list = filter (flip notElem lv) list
-          throwing list = throw $ NoteExcp $ printf "{{getRequireBehavior -> process1 -> checkCondition}}: variables: %s in conditional statement are global"
+          throwing list = throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process1 -> checkCondition}}: variables: %s in conditional statement are global"
             (init $ init $ foldl' (\l r -> l ++ r ++ ", ") "" list)
           foo :: [String] -> Expression -> [String]
           foo lv (BinOpExpr (VarExpr _ _ varName1) _ (VarExpr _ _ varName2))
@@ -301,51 +316,51 @@ getRequireBehavior called methods funName = case runStateT parseFunDefs methods 
       | otherwise = last $ splitOn "->" str
 
 --Übergeben wird ist die Liste der Statements, in der sich das übergebene Expression befindet
-getEnsures :: String -> [Statement] -> [String] -> [String] -> Expression -> [Maybe JMLExpr]
-getEnsures methods stmts funArgs lv a = case a of
+getEnsures :: [ExternalDeclaration] -> [Statement] -> [String] -> [String] -> Expression -> [Maybe JMLExpr]
+getEnsures extDeclList stmts funArgs lv a = case a of
   IntLiteral n                                  -> [Just $ JMLExpr a]
   BoolLiteral n                                 -> [Just $ JMLExpr a]
   CharLiteral n                                 -> [Just $ JMLExpr a]
   StringLiteral n                               -> [Just $ JMLExpr a]
   Null                                          -> [Just $ JMLExpr Null]
-  FunCallExpr (VarExpr _ _ funName) funArgsList -> process1 (getRequireBehavior True methods funName) methods funName funArgsList
-{-    | isPure methods funName -> process1 (getRequireBehavior True methods funName) methods funName funArgsList
+  FunCallExpr (VarExpr _ _ funName) funArgsList -> process1 (getRequireEnsureBehavior True extDeclList funName) extDeclList funName funArgsList
+{-    | isPure extDeclList funName -> process1 (getRequireEnsureBehavior True extDeclList funName) extDeclList funName funArgsList
     | otherwise              -> [Nothing]-}
   VarExpr (Just _) _ _ -> throw $ NoteExcp "{{getEnsures}}: VarExpr (Just _) _ _: why of Just?"
   a@(VarExpr Maybe.Nothing _ varName)           ->
     if varName `elem` lv && varName `elem` funArgs then [Just $ JMLExpr a] else
     if varName `elem` lv && varName `notElem` funArgs then --throw $ NoteExcp $ printf "423:\n%s\t%s" varName (show lv)
       let (a@(AssignStmt _ (AssignExpr (VarExpr _ objs vn2) expr2)),typ) = getStmtOfVar stmts varName
-      in if typ /= "For" then getEnsures methods stmts funArgs lv expr2
+      in if typ /= "For" then getEnsures extDeclList stmts funArgs lv expr2
          else [Just $ JMLExpr $ VarExpr Maybe.Nothing objs vn2]
     else throw $ NoteExcp "{{getEnsures}}: VarExpr Nothing _ varName: varName is not a local variable"
   ArrayExpr _ _                                 ->
     throw $ NoteExcp "{{getEnsures}}: ArrayExpr: un-implemented"
   BinOpExpr exprL binOp exprR                   ->
-    let left  = getEnsures methods stmts funArgs lv exprL
-        right = getEnsures methods stmts funArgs lv exprR
+    let left  = getEnsures extDeclList stmts funArgs lv exprL
+        right = getEnsures extDeclList stmts funArgs lv exprR
     in --if any isNothing (left++right) then throw $ NoteExcp [Maybe.Nothing] -- any (all isNothing) (left:right:[])
        {-else-} let extractExprL = map (\(Just (JMLExpr l))->l) (filter (/=Maybe.Nothing) left)--(filter (/=Nothing) left)
                     extractExprR = map (\(Just (JMLExpr r))->r) (filter (/=Maybe.Nothing) right)--(filter (/=Nothing) right)
             in zipWith (\l r -> Just $ JMLExpr $ BinOpExpr l binOp r) extractExprL extractExprR--[Just $ JMLExpr $ BinOpExpr ll binOp rr]
 
   UnOpExpr unOp expr                            ->
-    let extractExpr = map (\(Just (JMLExpr x))->x) $ getEnsures methods stmts funArgs lv expr
+    let extractExpr = map (\(Just (JMLExpr x))->x) $ getEnsures extDeclList stmts funArgs lv expr
     in map (Just . JMLExpr . UnOpExpr unOp) extractExpr
   CondExpr{}                                    ->
     throw $ NoteExcp "{{getEnsures}}: CondExpr: un-implemented"
   AssignExpr _ expr                             ->
-    getEnsures methods stmts funArgs lv expr
+    getEnsures extDeclList stmts funArgs lv expr
   ExcpExpr _ _                                  -> [Maybe.Nothing]
   ReturnExpr Maybe.Nothing                      -> [Maybe.Nothing]
   ReturnExpr (Just expr)                        ->
-    getEnsures methods stmts funArgs lv expr
+    getEnsures extDeclList stmts funArgs lv expr
 
   where
     --deal with functions
-    process1 :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> String -> String -> [Expression] -> [Maybe JMLExpr]
+    process1 :: [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [ExternalDeclaration] -> String -> [Expression] -> [Maybe JMLExpr]
     process1 re _ _ _ = map (\(_,_,ens)->ens) re
-     {- if isPure methods funName
+     {- if isPure extDeclList funName
         && length re >= 1 then map (\(_,_,ens)->ens) re
       else throw $ NoteExcp $ printf "431:\n%s" (show re) -}
 
