@@ -49,13 +49,14 @@ parseTry = do
 
 exprStmt :: Parser Statement
 exprStmt = do
-  e <- parseReturn <|> parseExcp <|> parseExpr
+  e <- parseReturn <|> parseExcp <|> parseAssign <|> parseExpr
   case e of
     AssignExpr {} -> pure $ AssignStmt [] e
     VarExpr {} -> pure $ VarStmt e
     FunCallExpr {} -> pure $ FunCallStmt e
     ReturnExpr m -> pure $ ReturnStmt m
-    _ -> pure $ ReturnStmt (Just e)
+    ExcpExpr {} -> pure $ ReturnStmt (Just e)
+    _ -> unexpected "expression as statement"
 
 parseStmt :: Parser Statement
 parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry

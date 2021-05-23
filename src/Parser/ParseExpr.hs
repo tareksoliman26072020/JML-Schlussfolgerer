@@ -142,8 +142,8 @@ parseBinExpr = do
   l <- many parseBinRight
   pure $ foldl (\ a (o, e) -> BinOpExpr a o e) e1 l
 
-parseCondExpr :: Parser Expression
-parseCondExpr = do
+parseExpr :: Parser Expression
+parseExpr = do
   e1 <- parseBinExpr
   m <- optionMaybe $ skipChar '?'
   case m of
@@ -165,9 +165,6 @@ parseExcp = do
   i <- keyword "throw" *> keyword "new" *> ident
   ExcpExpr (UserDefException i) <$> optionMaybe
     (skipChar '(' *> skip stringLit <* skipChar ')')
-
-parseExpr :: Parser Expression
-parseExpr = parseAssign <|> parseCondExpr
 
 baseTypes :: [Types]
 baseTypes = [Int, Void, Char, Double, Short, Float, Long, Boolean, Byte]
