@@ -10,7 +10,7 @@ skip :: Parser a -> Parser a
 skip = (<* spaces)
 
 signs :: String
-signs = ".+-/*<>=!%|&?:"
+signs = "!%&*+-./:<=>?@|"
 
 keyword :: String -> Parser String
 keyword s = skip . try $ string s <* notFollowedBy

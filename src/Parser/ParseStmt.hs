@@ -1,5 +1,7 @@
 module Parser.ParseStmt where
 
+import Data.Maybe
+
 import Parser.ParseExpr
 import Parser.Types
 
@@ -53,8 +55,7 @@ exprStmt = do
     VarExpr {} -> pure $ VarStmt e
     FunCallExpr {} -> pure $ FunCallStmt e
     ReturnExpr m -> pure $ ReturnStmt m
-    ExcpExpr {} -> pure $ FunCallStmt e
-    _ -> unexpected "expression as statement"
+    _ -> pure $ ReturnStmt (Just e)
 
 parseStmt :: Parser Statement
 parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
@@ -63,9 +64,10 @@ parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
 parseExtDecl :: Parser ExternalDeclaration
 parseExtDecl = do
   l <- parseModifiers
+  b <- optionMaybe $ keyword "/*@" *> keyword "pure" <* keyword "@*/"
   t <- parseOptFunCall
   e <- optionMaybe $ keyword "throws" *> (UserDefException <$> ident)
-  FunDef l False (FunCallStmt t) e <$> parseStmt
+  FunDef l (isJust b) (FunCallStmt t) e <$> parseStmt
 
 parseDeclList :: Parser [ExternalDeclaration]
 parseDeclList = spaces *> many parseExtDecl <* eof

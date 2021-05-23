@@ -5,7 +5,6 @@ import Data.Char
 import Data.List
 
 import Parser.Types
-import Parser.ParseStmt
 
 showType :: Type Types -> String
 showType = \case
@@ -21,8 +20,7 @@ showExcp = \case
 showExpr :: Expression -> String
 showExpr = \case
   VarExpr {varType, varObj, varName} -> maybe "" ((++ " ") . showType) varType
-    ++ intercalate "." (varObj
-    ++ [if isInfixOf "->" varName then "(" ++ varName ++ ")" else varName])
+    ++ intercalate "." (varObj ++ [varName])
   BinOpExpr {expr1, binOp, expr2} ->
     showParenExpr expr1 ++ " " ++ show binOp ++ " " ++ showParenExpr expr2
   UnOpExpr {unOp, expr} -> show unOp ++ showParenExpr expr
@@ -93,7 +91,9 @@ showStmt = \case
     ++ showStmt catchBody ++ case finallyBody of
       CompStmt [] -> ""
       _ -> "\nfinally " ++ showStmt finallyBody
-  ReturnStmt {returnS} -> "return" ++ maybe "" ((" " ++) . showExpr) returnS
+  ReturnStmt {returnS} -> case returnS of
+    Just e@ExcpExpr {} -> showExpr e
+    _ -> showExpr (ReturnExpr returnS)
 
 showDecl :: ExternalDeclaration -> String
 showDecl FunDef {funModifier, isPureFlag, funDecl, throws, funBody} =
