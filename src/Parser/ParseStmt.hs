@@ -1,6 +1,8 @@
 module Parser.ParseStmt where
 
-import Data.Maybe
+import Data.Char (toLower)
+import Data.Maybe (isJust)
+import Data.List (nub)
 
 import Parser.ParseExpr
 import Parser.Types
@@ -10,6 +12,19 @@ import Text.ParserCombinators.Parsec
 parseBlock :: Parser Statement
 parseBlock = CompStmt <$>
   (skipChar '{' *> many (parseStmt <* many (skipChar ';')) <* skipChar '}')
+
+modifiers :: [Modifier]
+modifiers =
+  [ Static
+  , Public
+  , Private
+  , Protected
+  , Final
+  , Abstract ]
+
+parseModifiers :: Parser [Modifier]
+parseModifiers = nub <$> many
+  (choice $ map (\ m -> m <$ keyword (map toLower $ show m)) modifiers)
 
 parseDecl :: Parser Statement
 parseDecl = do
@@ -47,20 +62,25 @@ parseTry = do
     Just f -> f
     _ -> CompStmt []
 
-exprStmt :: Parser Statement
-exprStmt = do
-  e <- parseReturn <|> parseExcp <|> parseAssign <|> parseExpr
+parseReturn :: Parser Statement
+parseReturn = keyword "return" *> (ReturnStmt <$> optionMaybe parseExpr)
+
+parseExcp :: Parser Statement
+parseExcp = do
+  i <- keyword "throw" *> keyword "new" *> ident
+  ReturnStmt . Just . ExcpExpr (UserDefException i) <$> optionMaybe
+    (skipChar '(' *> skip stringLit <* skipChar ')')
+
+funStmt :: Parser Statement
+funStmt = do
+  e <- parseOptFunCall
   case e of
-    AssignExpr {} -> pure $ AssignStmt [] e
-    VarExpr {} -> pure $ VarStmt e
     FunCallExpr {} -> pure $ FunCallStmt e
-    ReturnExpr m -> pure $ ReturnStmt m
-    ExcpExpr {} -> pure $ ReturnStmt (Just e)
-    _ -> unexpected "expression as statement"
+    _ -> error "funStmt"
 
 parseStmt :: Parser Statement
 parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
-  <|> exprStmt <|> parseDecl
+  <|> parseReturn <|> parseExcp <|> parseDecl <|> funStmt
 
 parseExtDecl :: Parser ExternalDeclaration
 parseExtDecl = do

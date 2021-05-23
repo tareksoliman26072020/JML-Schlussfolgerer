@@ -1,7 +1,6 @@
 module Parser.ParseExpr where
 
 import Data.Char
-import Data.List (nub)
 import Parser.Types
 
 import Text.ParserCombinators.Parsec
@@ -75,19 +74,6 @@ primExpr = skip javaLit
   <|> BoolLiteral False <$ keyword "false"
   <|> parseArray
 
-modifiers :: [Modifier]
-modifiers =
-  [ Static
-  , Public
-  , Private
-  , Protected
-  , Final
-  , Abstract ]
-
-parseModifiers :: Parser [Modifier]
-parseModifiers = nub <$> many
-  (choice $ map (\ m -> m <$ keyword (map toLower $ show m)) modifiers)
-
 parseVar :: Parser Expression
 parseVar = do
   t <- parseArrType
@@ -151,20 +137,6 @@ parseExpr = do
       e2 <- parseExpr <* skipChar ':'
       CondExpr e1 e2 <$> parseExpr
     _ -> pure e1
-
-parseAssign :: Parser Expression
-parseAssign = do
-  e1 <- try $ parseArray <* keyword "="
-  AssignExpr e1 <$> parseExpr
-
-parseReturn :: Parser Expression
-parseReturn = keyword "return" *> (ReturnExpr <$> optionMaybe parseExpr)
-
-parseExcp :: Parser Expression
-parseExcp = do
-  i <- keyword "throw" *> keyword "new" *> ident
-  ExcpExpr (UserDefException i) <$> optionMaybe
-    (skipChar '(' *> skip stringLit <* skipChar ')')
 
 baseTypes :: [Types]
 baseTypes = [Int, Void, Char, Double, Short, Float, Long, Boolean, Byte]
