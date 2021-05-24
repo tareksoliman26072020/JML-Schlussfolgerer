@@ -26,8 +26,8 @@ parseModifiers :: Parser [Modifier]
 parseModifiers = nub <$> many
   (choice $ map (\ m -> m <$ keyword (map toLower $ show m)) modifiers)
 
-parseDecl :: Parser Statement
-parseDecl = do
+parseDeclOrFunCall :: Parser Statement
+parseDeclOrFunCall = do
   l <- parseModifiers
   e <- parseArray
   m <- optionMaybe $ skipChar '=' *> parseExpr
@@ -75,7 +75,7 @@ parseExcp = do
 
 parseStmt :: Parser Statement
 parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
-  <|> parseReturn <|> parseExcp <|> parseDecl
+  <|> parseReturn <|> parseExcp <|> parseDeclOrFunCall
 
 parseExtDecl :: Parser ExternalDeclaration
 parseExtDecl = do
