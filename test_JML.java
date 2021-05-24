@@ -4,7 +4,7 @@
   @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo21(){
-  return 5;
+  return 5
 }
 
 /*@ normal behavior
@@ -13,7 +13,7 @@ public /*@ pure @*/ int boo21(){
   @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo22(){
-  return boo21();
+  return boo21()
 }
 
 /*@ normal behavior
@@ -23,7 +23,7 @@ public /*@ pure @*/ int boo22(){
   @*/
 public /*@ pure @*/ int boo22_2(){
   int x = boo21();
-  return x;
+  return x
 }
 
 /*@ normal behavior
@@ -33,11 +33,11 @@ public /*@ pure @*/ int boo22_2(){
   @*/
 public /*@ pure @*/ int boo23(){
   int x = 3 + boo21();
-  return x;
+  return x
 }
 
 /*@ exceptional behavior
-  @ requires (boo25->i) > 10;
+  @ requires boo25$i > 10;
   @ signals Exception;
   @ also
   @ normal behavior
@@ -47,7 +47,7 @@ public /*@ pure @*/ int boo23(){
   @*/
 public int boo24(){
   int x = 3 + boo25(5);
-  return x;
+  return x
 }
 
 /*@ exceptional behavior
@@ -60,26 +60,26 @@ public int boo24(){
   @ ensures \result = 6;
   @*/
 public int boo25(int i){
-  if(i>10){
-    throw new Exception("meow");
+  if(i > 10){
+    throw new Exception("meow")
   }
   else{
-    return 6;
+    return 6
   }
 }
 
 /*@ normal behavior
-  @ requires (boo27->i) >= 0;
+  @ requires boo27$i >= 0;
   @ assignable \nothing;
-  @ ensures \result = (boo27->i);
+  @ ensures \result = boo27$i;
   @ also
   @ normal behavior
-  @ requires (boo27->i) < 0;
+  @ requires boo27$i < 0;
   @ assignable \nothing;
-  @ ensures \result = -1 * (boo27->i);
+  @ ensures \result = -1 * boo27$i;
   @*/
 public /*@ pure @*/ int boo26(){
-  return boo27(5);
+  return boo27(5)
 }
 
 /*@ normal behavior
@@ -94,11 +94,11 @@ public /*@ pure @*/ int boo26(){
   @*/
 public /*@ pure @*/ int boo27(int i){
   if(i >= 0){
-    return i;
+    return i
   }
   else{
     int res = -1 * i;
-    return res;
+    return res
   }
 }
 
@@ -112,28 +112,34 @@ public /*@ pure @*/ int boo27(int i){
   @ ensures \result = 1;
   @ also
   @ normal behavior
-  @ requires (boo27->i) >= 0;
+  @ requires boo27$i >= 0;
   @ assignable \nothing;
-  @ ensures \result = (boo27->i);
+  @ ensures \result = boo27$i;
   @ also
   @ normal behavior
-  @ requires (boo27->i) < 0;
+  @ requires boo27$i < 0;
   @ assignable \nothing;
-  @ ensures \result = -1 * (boo27->i);
+  @ ensures \result = -1 * boo27$i;
   @*/
 public int boo28(){
   try{
     int x = 3;
     if(x == 3){
-      throw new Exception("something");
+      throw new Exception("something")
     }
     else{
-      return 1;
+      return 1
     }
   }
   catch(Exception e){
-    return boo27(5);
+    return boo27(5)
   }
+}
+
+/**/
+public void boo29(){
+  int z = 0;
+  int y = 0
 }
 
 /*@ normal behavior
@@ -146,16 +152,16 @@ public int boo28(){
   @ signals Exception;
   @*/
 public static int sqrt(int y) throws Exception{
-  for(int i=0; i<=y; i=i+1){
-    int j = i*i;
-    if(j==y){
-      return i;
+  for(int i = 0; i <= y; i = i + 1){
+    int j = i * i;
+    if(j == y){
+      return i
     }
     else{
-      if(i==y){
-	throw new Exception("not found");
+      if(i == y){
+        throw new Exception("not found")
       }
-      else{}
     }
   }
 }
+

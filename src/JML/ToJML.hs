@@ -61,8 +61,8 @@ isPure extDeclList funName =
     process3 localVariables (CondStmt condition siff selsee) =
       process4 localVariables condition &&
       all (\stmt -> process2 (localVariables ++ getCompStmtLocalVariables stmt) stmt) [siff,selsee]
-    process3 localVariables (ForStmt stmtAcc cond _ stmtBody) =
-      let newLocalVariables = localVariables ++ getCompStmtLocalVariables stmtAcc ++ getCompStmtLocalVariables stmtBody
+    process3 localVariables (ForStmt AssignStmt{assign=AssignExpr{assEleft=VarExpr{varName}}} cond _ stmtBody) =
+      let newLocalVariables = localVariables ++ [varName] ++ getCompStmtLocalVariables stmtBody
       in process4 newLocalVariables cond && process2 newLocalVariables stmtBody
     process3 localVariables (WhileStmt _ whileBody) = process2 (localVariables ++ getCompStmtLocalVariables whileBody) whileBody
     process3 localVariables (FunCallStmt (FunCallExpr (VarExpr _ _ varName) _)) = isPure extDeclList varName
@@ -159,9 +159,9 @@ getRequireEnsureBehavior called extDeclList funName =
           requires2 = refineRes $ process0 stmts funArgs (lv ++ getCompStmtLocalVariables elseComp) (appendBoolExprRight condExpr (negate condition)) elseComp
           notExists = checkCondition lv condition
       in notExists `seq` (requires1 ++ requires2)
-    process1 stmts funArgs lv condExpr (ForStmt acc cond _ forBody) =
-      let x = refineRes $ process0 stmts funArgs (lv ++ getCompStmtLocalVariables acc ++ getCompStmtLocalVariables forBody) (appendBoolExprRight condExpr cond) forBody
-          notExists = checkCondition (lv ++ getCompStmtLocalVariables acc) cond
+    process1 stmts funArgs lv condExpr (ForStmt AssignStmt{assign=AssignExpr{assEleft=VarExpr{varName}}} cond _ forBody) =
+      let x = refineRes $ process0 stmts funArgs (lv ++ [varName] ++ getCompStmtLocalVariables forBody) (appendBoolExprRight condExpr cond) forBody
+          notExists = checkCondition (lv ++ [varName]) cond
       in notExists `seq` x
     process1 stmts funArgs lv condExpr (WhileStmt condition whileBody) =
       let x = refineRes $ process0 stmts funArgs (lv ++ getCompStmtLocalVariables whileBody) (appendBoolExprRight condExpr condition) whileBody
@@ -222,7 +222,7 @@ getRequireEnsureBehavior called extDeclList funName =
           hasFunName (BinOpExpr expr1 _ expr2) = hasFunName expr1 || hasFunName expr2
           hasFunName (UnOpExpr _ expr) = hasFunName expr
           hasFunName (VarExpr _ _ varName) = --varName == funName
-            let splitIt = last $ init $ splitOn "->" varName
+            let splitIt = last $ init $ splitOn "$" varName
             in splitIt == funName
           hasFunName expr = False--throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process2 -> appendOriginalCondExpr}}:\n%s" (show expr)
           f :: (Maybe Exception,JMLExpr,Maybe JMLExpr) -> (Maybe Exception,JMLExpr,Maybe JMLExpr)
@@ -281,7 +281,7 @@ getRequireEnsureBehavior called extDeclList funName =
       _                        -> True
 
     attachFunName1 :: String -> [String] -> [String]
-    attachFunName1 funName lv = map (\str->funName++"->"++str) lv
+    attachFunName1 funName lv = map (\str->funName++"$"++str) lv
 
     attachFunName2 :: String -> Statement -> Statement
     attachFunName2 funName (CompStmt list) = CompStmt $ map (attachFunName2 funName) list
@@ -297,7 +297,7 @@ getRequireEnsureBehavior called extDeclList funName =
     attachFunName2 funName (ReturnStmt (Just expr)) = ReturnStmt (Just (attachFunName2' funName expr))
 
     attachFunName2' :: String -> Expression -> Expression
-    attachFunName2' funName (VarExpr a b varName) = VarExpr a b (funName++"->"++varName)
+    attachFunName2' funName (VarExpr a b varName) = VarExpr a b (funName++"$"++varName)
     attachFunName2' funName (ArrayExpr arrName Maybe.Nothing) = ArrayExpr (attachFunName2' funName arrName) Maybe.Nothing
     attachFunName2' funName (ArrayExpr arrName (Just index)) = ArrayExpr (attachFunName2' funName arrName)(Just $ attachFunName2' funName index)
     attachFunName2' funName (BinOpExpr expr1 binOp expr2) = BinOpExpr (attachFunName2' funName expr1) binOp (attachFunName2' funName expr2)
@@ -312,8 +312,8 @@ getRequireEnsureBehavior called extDeclList funName =
 
     getOriginalFunName :: String -> String
     getOriginalFunName str
-      | not (isInfixOf "->" str) = str
-      | otherwise = last $ splitOn "->" str
+      | not (isInfixOf "$" str) = str
+      | otherwise = last $ splitOn "$" str
 
 --Übergeben wird ist die Liste der Statements, in der sich das übergebene Expression befindet
 getEnsures :: [ExternalDeclaration] -> [Statement] -> [String] -> [String] -> Expression -> [Maybe JMLExpr]

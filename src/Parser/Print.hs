@@ -13,9 +13,7 @@ showType = \case
   ArrayType {baseType} -> showType baseType ++ "[]"
 
 showExcp :: Exception -> String
-showExcp = \case
-  UserDefException str -> str
-  e -> show e
+showExcp (Exception str) = str
 
 showExpr :: Expression -> String
 showExpr = \case
@@ -76,18 +74,18 @@ showStmt = \case
   AssignStmt {varModifier, assign} ->
     showModifiers varModifier ++ showExpr assign
   CondStmt {condition, siff, selsee} ->
-    "if " ++ parenExpr condition ++ " "
+    "if" ++ parenExpr condition
     ++ showStmt siff ++ case selsee of
       CompStmt [] -> ""
-      _ -> "\nelse " ++ showStmt selsee
+      _ -> "\nelse" ++ showStmt selsee
   ForStmt {acc, cond, step, forBody} ->
-    "for (" ++ showStmt acc ++ "; " ++ showExpr cond ++ "; " ++ showStmt step
-    ++ ")\n" ++ showStmt forBody
+    "for(" ++ showStmt acc ++ "; " ++ showExpr cond ++ "; " ++ showStmt step
+    ++ ")" ++ showStmt forBody
   WhileStmt {} -> error "showStmt"
   FunCallStmt {funCall} -> showExpr funCall
   TryCatchStmt {tryBody, catchExcp, catchBody, finallyBody} ->
-    "try " ++ showStmt tryBody
-    ++ "\ncatch (" ++ showExcpType catchExcp ++ ") "
+    "try" ++ showStmt tryBody
+    ++ "\ncatch(" ++ showExcpType catchExcp ++ ")"
     ++ showStmt catchBody ++ case finallyBody of
       CompStmt [] -> ""
       _ -> "\nfinally " ++ showStmt finallyBody
@@ -98,5 +96,5 @@ showStmt = \case
 showDecl :: ExternalDeclaration -> String
 showDecl FunDef {funModifier, isPureFlag, funDecl, throws, funBody} =
   showModifiers funModifier
-  ++ (if isPureFlag then " /*@ pure @*/ " else "") ++ showStmt funDecl
-  ++ maybe "" ((" throws " ++) . showExcp) throws ++ " " ++ showStmt funBody
+  ++ (if isPureFlag then "/*@ pure @*/ " else "") ++ showStmt funDecl
+  ++ maybe "" ((" throws " ++) . showExcp) throws ++ showStmt funBody

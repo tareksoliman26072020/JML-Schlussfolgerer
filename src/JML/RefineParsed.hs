@@ -184,7 +184,7 @@ getStmtOfVar stmts var =
     --VarExpr {varType :: Maybe (Type Types), varObj :: [String], varName :: String}
     f (AssignStmt _ (AssignExpr (VarExpr _ _ varName) _)) | varName == var = True
     f AssignStmt{} = False
-    f (ForStmt (CompStmt acc) _ _ (CompStmt body)) = any f (acc++body)
+    f (ForStmt assignStmt _ _ (CompStmt body)) = any f (assignStmt : body)
     f (WhileStmt _ (CompStmt body)) = any f body
     f (TryCatchStmt body1 _ body2 body3) = any f [body1,body2,body3]
     f CondStmt {siff, selsee} = any f [siff,selsee]
@@ -194,7 +194,7 @@ getStmtOfVar stmts var =
     extract :: Statement -> Statement
     extract (CompStmt stmtList) = takeFirstOccurrence f stmtList
     extract a@AssignStmt{} = a
-    extract (ForStmt (CompStmt acc) _ _ (CompStmt body)) = extract (CompStmt $ acc ++ body)
+    extract (ForStmt assignStmt _ _ (CompStmt body)) = extract (CompStmt $ assignStmt : body)
     extract (WhileStmt _ body) = extract body
     extract (TryCatchStmt (CompStmt body1) _ (CompStmt body2) (CompStmt body3)) = extract (CompStmt $ body1 ++ body2 ++ body3)
     --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}

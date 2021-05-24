@@ -88,23 +88,9 @@ data Modifier
   deriving (Eq, Show)
 
 -- | https://www.geeksforgeeks.org/types-of-exception-in-java-with-examples/
-data Exception
-  = Exception
-  | ArithmeticException
-  | ArrayIndexOutOfBoundsException
-  | ClassNotFoundException
-  | FileNotFoundException
-  | IOException
-  | InterruptedException
-  | NoSuchFieldException
-  | NoSuchMethodException
-  | NullPointerException
-  | NumberFormatException
-  | RuntimeExceptionException
-  | StringIndexOutOfBoundsException
-  | IllegalArgumentException
-  | UserDefException String
-  deriving(Show,Eq)
+newtype Exception = Exception String deriving Eq
+instance Show Exception where
+  show (Exception str) = str
 
 newtype NotatedException = NoteExcp String
 

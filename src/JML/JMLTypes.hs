@@ -26,7 +26,7 @@ instance Show JMLSyntax where
 
 newtype JMLExpr = JMLExpr Expression deriving Eq
 instance Show JMLExpr where
-  show (JMLExpr expr) = showExpr expr where
+  show (JMLExpr expr) = showExpr expr
 
 data JMLLiterals = Old
                  | Result

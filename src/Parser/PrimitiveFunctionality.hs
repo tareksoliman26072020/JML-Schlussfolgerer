@@ -177,21 +177,7 @@ toType str | elem '<' str    =
 --toType str | isPrefixOf "Exception" str = BuiltInType (Exception $ toException str)
 
 toException :: String -> Exception
-toException "Exception"                       = Exception
-toException "ArithmeticException"             = ArithmeticException
-toException "ArrayIndexOutOfBoundsException"  = ArrayIndexOutOfBoundsException
-toException "ClassNotFoundException"          = ClassNotFoundException
-toException "FileNotFoundException"           = FileNotFoundException
-toException "IOException"                     = IOException
-toException "InterruptedException"            = InterruptedException
-toException "NoSuchFieldException"            = NoSuchFieldException
-toException "NoSuchMethodException"           = NoSuchMethodException
-toException "NullPointerException"            = NullPointerException
-toException "NumberFormatException"           = NumberFormatException
-toException "RuntimeExceptionException"       = RuntimeExceptionException
-toException "StringIndexOutOfBoundsException" = StringIndexOutOfBoundsException
-toException "IllegalArgumentException"        = IllegalArgumentException
-toException str                               = UserDefException str
+toException str                               = Exception str
 
 -- data BinOp = Plus | Mult | Minus | Div | LessEq | Eq | Neq | And | Or deriving (Eq, Show)
 toBin :: String -> BinOp

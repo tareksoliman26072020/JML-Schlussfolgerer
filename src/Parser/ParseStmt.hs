@@ -70,7 +70,7 @@ parseReturn = keyword "return" *> (ReturnStmt <$> optionMaybe parseExpr)
 parseExcp :: Parser Statement
 parseExcp = do
   i <- keyword "throw" *> keyword "new" *> ident
-  ReturnStmt . Just . ExcpExpr (UserDefException i) <$> optionMaybe
+  ReturnStmt . Just . ExcpExpr (Exception i) <$> optionMaybe
     (skipChar '(' *> skip stringLit <* skipChar ')')
 
 parseStmt :: Parser Statement
@@ -82,7 +82,7 @@ parseExtDecl = do
   l <- parseModifiers
   b <- optionMaybe $ keyword "/*@" *> keyword "pure" <* keyword "@*/"
   t <- parseOptFunCall -- arguments are obligatory here
-  e <- optionMaybe $ keyword "throws" *> (UserDefException <$> ident)
+  e <- optionMaybe $ keyword "throws" *> (Exception <$> ident)
   FunDef l (isJust b) (FunCallStmt t) e <$> parseStmt
 
 parseDeclList :: Parser [ExternalDeclaration]

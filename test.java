@@ -50,6 +50,10 @@ public int boo28(){
     return boo27(5);
   }
 }
+public void boo29(){
+  int z = 0;
+  int y = 0;
+}
 public static int sqrt(int y) throws Exception{
   for(int i=0; i<=y; i=i+1){
     int j = i*i;
