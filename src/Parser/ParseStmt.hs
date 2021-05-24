@@ -33,7 +33,9 @@ parseDecl = do
   m <- optionMaybe $ skipChar '=' *> parseExpr
   pure $ case m of
     Just v -> AssignStmt l (AssignExpr e v)
-    _ -> VarStmt e
+    _ -> case e of -- ignore modifiers
+      FunCallExpr {} -> FunCallStmt e
+      _ -> VarStmt e -- could be an array
 
 parseIf :: Parser Statement
 parseIf = do
@@ -71,22 +73,15 @@ parseExcp = do
   ReturnStmt . Just . ExcpExpr (UserDefException i) <$> optionMaybe
     (skipChar '(' *> skip stringLit <* skipChar ')')
 
-funStmt :: Parser Statement
-funStmt = do
-  e <- parseOptFunCall
-  case e of
-    FunCallExpr {} -> pure $ FunCallStmt e
-    _ -> error "funStmt"
-
 parseStmt :: Parser Statement
 parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
-  <|> parseReturn <|> parseExcp <|> parseDecl <|> funStmt
+  <|> parseReturn <|> parseExcp <|> parseDecl
 
 parseExtDecl :: Parser ExternalDeclaration
 parseExtDecl = do
   l <- parseModifiers
   b <- optionMaybe $ keyword "/*@" *> keyword "pure" <* keyword "@*/"
-  t <- parseOptFunCall
+  t <- parseOptFunCall -- arguments are obligatory here
   e <- optionMaybe $ keyword "throws" *> (UserDefException <$> ident)
   FunDef l (isJust b) (FunCallStmt t) e <$> parseStmt
 
