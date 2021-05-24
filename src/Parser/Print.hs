@@ -6,6 +6,19 @@ import Data.List
 
 import Parser.Types
 
+-- if xss contains a string whose infix starts with any mentioned string in except, then this element in xss will be handled with sep2
+-- otherwise it will be handled with sep1
+intercalate' :: String -> String -> [String] -> [String] -> String
+intercalate' sep1 sep2 except xss = concat (intersperse' sep1 sep2 except xss)
+  where
+    intersperse' _    _    except []        = []
+    intersperse' sep1 sep2 except a  = prependToAll' sep1 sep2 except a
+
+    prependToAll' _    _    _      [] = []
+    prependToAll' sep1 sep2 except (x:xs)
+      | any (flip isInfixOf x) except = x : sep2 : prependToAll' sep1 sep2 except xs
+      | otherwise                     =  x : sep1 : prependToAll' sep1 sep2 except xs
+
 showType :: Type Types -> String
 showType = \case
   BuiltInType t -> map toLower $ show t
@@ -68,8 +81,10 @@ showStmt :: Statement -> String
 showStmt = \case
   CompStmt {statements} -> case statements of
     [] -> "{}"
-    _ -> "{\n" ++ indent (intercalate ";\n" $ map showStmt statements)
+    _ -> "{\n" ++ indent (intercalate' ";\n" "\n" except (map showStmt statements))
       ++ "}"
+    where
+      except = words "for if else while try catch finally"
   VarStmt {var} -> showExpr var
   AssignStmt {varModifier, assign} ->
     showModifiers varModifier ++ showExpr assign
