@@ -12,8 +12,6 @@ import Prelude hiding(negate)
 import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
---import Parser.PrimitiveFunctionality
-import Data.List.Split(splitOn)
 import Data.List(foldl',isInfixOf,(\\))
 import Data.Either(partitionEithers, fromRight)
 import Control.Applicative(optional)
@@ -37,7 +35,7 @@ isPure extDeclList funName =
       | isNothing varType ||
         (isJust varType && fromJust varType /= BuiltInType Void) = process2 (getFunLocalVariables lV) funBody
         --if the function is of void, then it's not pure:
-      | isJust varType && fromJust varType == BuiltInType Void   = False
+      | varType == Just (BuiltInType Void)   = False
       | otherwise = throw $ NoteExcp "{{isPure}}: one or more cases were not discussed"
 
     -- At this point the function isn't of void.
@@ -107,32 +105,9 @@ jmlify extDeclList = map f extDeclList where
                                  funDecl=funDecl extDecl,
                                  throws=throws extDecl,
                                  funBody=funBody extDecl}
-    in case isPure extDeclList varName of
-      True -> (jmlify_,purifiedExtDecl)
-      False -> (jmlify_,extDecl)
-
-{-
-jmlify :: String -> String
-jmlify sourceCode = fst $ fromJust $ runStateT jmlify_ sourceCode
-  where
-    jmlify_ :: Parser String
-    jmlify_ = do
-      state <- getState'
-      parsed <- parseFunDef
-      rest <- getState'
-      let FunDef modifiers _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
-          purified_fun
-            | isPure sourceCode funName =
-                let fun = fromJust $ takeUntilBracesClosed state '{' '}'
-                    splittedAtModifiers = splitOn (fromModifiers modifiers) fun
-                in fromModifiers modifiers ++ " /*@ pure @*/" ++ last splittedAtModifiers
-            | otherwise = fromJust $ takeUntilBracesClosed state '{' '}'
-          jml = toJML $ toJMLs $ getRequireEnsureBehavior False sourceCode funName
-      newState rest
-      next <- optional jmlify_
-      if isNothing next then return $ jml ++ "\n" ++ purified_fun
-      else return $ jml ++ "\n" ++ purified_fun ++ "\n\n" ++ fromJust next
--}
+    in if isPure extDeclList varName
+         then (jmlify_,purifiedExtDecl)
+       else (jmlify_,extDecl)
 
 getRequireEnsureBehavior :: Bool -> [ExternalDeclaration] -> String -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
 getRequireEnsureBehavior called extDeclList funName =
@@ -199,7 +174,7 @@ getRequireEnsureBehavior called extDeclList funName =
       in x1 ++ x2
     process2 stmts lv condExpr (AssignExpr exprL exprR) =
       let x1 = process2 stmts lv condExpr exprR
-      in (assignExists lv exprL) `seq` x1
+      in assignExists lv exprL `seq` x1
       {-case exprL of --deleteEnsures x1
       BoolLiteral _   -> deleteEnsures x1
       UnOpExpr _ expr ->-}
@@ -222,7 +197,7 @@ getRequireEnsureBehavior called extDeclList funName =
           hasFunName (BinOpExpr expr1 _ expr2) = hasFunName expr1 || hasFunName expr2
           hasFunName (UnOpExpr _ expr) = hasFunName expr
           hasFunName (VarExpr _ _ varName) = --varName == funName
-            let splitIt = last $ init $ splitOn "$" varName
+            let splitIt = takeWhile (/='$') varName
             in splitIt == funName
           hasFunName expr = False--throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process2 -> appendOriginalCondExpr}}:\n%s" (show expr)
           f :: (Maybe Exception,JMLExpr,Maybe JMLExpr) -> (Maybe Exception,JMLExpr,Maybe JMLExpr)
@@ -244,7 +219,7 @@ getRequireEnsureBehavior called extDeclList funName =
 
     checkCondition :: [String] -> Expression -> ()
     checkCondition lv expr =
-      let exists list = filter (flip notElem lv) list
+      let exists list = filter (`notElem` lv) list
           throwing list = throw $ NoteExcp $ printf "{{getRequireEnsureBehavior -> process1 -> checkCondition}}: variables: %s in conditional statement are global"
             (init $ init $ foldl' (\l r -> l ++ r ++ ", ") "" list)
           foo :: [String] -> Expression -> [String]
@@ -313,7 +288,7 @@ getRequireEnsureBehavior called extDeclList funName =
     getOriginalFunName :: String -> String
     getOriginalFunName str
       | not (isInfixOf "$" str) = str
-      | otherwise = last $ splitOn "$" str
+      | otherwise = takeWhile (/='$') str
 
 --Übergeben wird ist die Liste der Statements, in der sich das übergebene Expression befindet
 getEnsures :: [ExternalDeclaration] -> [Statement] -> [String] -> [String] -> Expression -> [Maybe JMLExpr]

@@ -3,11 +3,8 @@ module JML.RefineParsed where
 import Parser.Types
 import Prelude hiding(negate)
 import Control.Exception(throw)
-import Control.Monad.State(runStateT)
 import Data.Maybe(isNothing, fromJust, isJust)
 import Parser.ParseExternalDeclarations
-import Parser.Parser
-import Parser.PrimitiveFunctionality
 import Data.List.Split(splitOn)
 import Text.Printf
 
@@ -47,35 +44,6 @@ getFunLocalVariables (FunDef _ _ (FunCallStmt (FunCallExpr _ funArgs)) _ funBody
     _ -> throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -> FunDef -> (FunCallStmt (FunCallExpr _ (-/>VarExpr)))"
 --uncomment this in case of extending ExternalDeclaration:
 --getFunLocalVariables _ = throw $ NoteExcp "{{getFunLocalVariables}}: ExternalDeclaration -/> FunDef"
-
-getUnparsedFunction :: String -> String -> String
-getUnparsedFunction methods seeked = fst $ fromJust $ runStateT getIt methods
-  where
-    getIt :: Parser String
-    getIt = do
-      state <- getState'
-      parsed <- parseFunDef
-      rest <- getState'
-      let FunDef modifiers _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _ = parsed
-      if seeked == funName then
-        let fun                 = fromJust $ takeUntilBracesClosed state '{' '}'
-            splittedAtModifiers = splitOn (fromModifiers modifiers) fun
-            yes                 = fromModifiers modifiers ++ last splittedAtModifiers
-        in return yes
-      else getIt
-
-getFunsNames :: String -> [String]
-getFunsNames methods =
-  let parsed = runStateT parseFunDefs methods
-  in if isNothing parsed || (isJust parsed && (not $ null $ snd $ fromJust parsed))
-       then throw $ NoteExcp "{{getFunctions}}: parsed == Nothing || snd parsed /= null"
-     else
-       let extDecls = fst $ fromJust parsed
-       in map f extDecls
-  where
-    f :: ExternalDeclaration -> String
-    f (FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr _ _ funName) _)) _ _) = funName
-    f _ = throw $ NoteExcp "{{getFunctions -> f}}: not parsed the right way"
 
 --At this point: variables passed to the function are already stored
 --getCompStmtLocalVariables prepares to traverse through the function's contents

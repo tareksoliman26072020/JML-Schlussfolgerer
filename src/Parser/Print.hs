@@ -16,7 +16,7 @@ intercalate' sep1 sep2 except xss = concat (intersperse' sep1 sep2 except xss)
 
     prependToAll' _    _    _      [] = []
     prependToAll' sep1 sep2 except (x:xs)
-      | any (flip isInfixOf x) except = x : sep2 : prependToAll' sep1 sep2 except xs
+      | any (`isInfixOf` x) except = x : sep2 : prependToAll' sep1 sep2 except xs
       | otherwise                     =  x : sep1 : prependToAll' sep1 sep2 except xs
 
 showType :: Type Types -> String
