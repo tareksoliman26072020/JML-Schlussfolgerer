@@ -36,11 +36,7 @@ public /*@ pure @*/ int boo23(){
   return x;
 }
 
-/*@ exceptional behavior
-  @ requires boo25$i > 10;
-  @ signals Exception;
-  @ also
-  @ normal behavior
+/*@ normal behavior
   @ requires true;
   @ assignable \nothing;
   @ ensures \result = 3 + 6;
@@ -72,11 +68,6 @@ public int boo25(int i){
   @ requires boo27$i >= 0;
   @ assignable \nothing;
   @ ensures \result = boo27$i;
-  @ also
-  @ normal behavior
-  @ requires boo27$i < 0;
-  @ assignable \nothing;
-  @ ensures \result = -1 * boo27$i;
   @*/
 public /*@ pure @*/ int boo26(){
   return boo27(5);
@@ -115,11 +106,6 @@ public /*@ pure @*/ int boo27(int i){
   @ requires boo27$i >= 0;
   @ assignable \nothing;
   @ ensures \result = boo27$i;
-  @ also
-  @ normal behavior
-  @ requires boo27$i < 0;
-  @ assignable \nothing;
-  @ ensures \result = -1 * boo27$i;
   @*/
 public int boo28(){
   try{
