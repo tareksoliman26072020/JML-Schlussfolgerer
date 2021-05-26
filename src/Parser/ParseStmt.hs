@@ -79,6 +79,8 @@ parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
 
 parseExtDecl :: Parser ExternalDeclaration
 parseExtDecl = do
+  let ts = try . string
+  optional . skip $ ts "/*" *> manyTill anyChar (ts "*/")
   l <- parseModifiers
   b <- optionMaybe $ keyword "/*@" *> keyword "pure" <* keyword "@*/"
   t <- parseOptFunCall -- arguments are obligatory here

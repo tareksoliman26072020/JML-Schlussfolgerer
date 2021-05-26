@@ -4,9 +4,12 @@ import Parser.Print (showDecl)
 import Text.ParserCombinators.Parsec (parse)
 
 main :: IO ()
-main = do
-  let f = "test.java"
-      o = f ++ ".out"
+main = mapM_ run
+  ["test" ++ n ++ j ++ ".java" | n <- ["", "2"], j <- ["", "_JML"]]
+
+run :: String -> IO ()
+run f = do
+  let o = f ++ ".out"
   s <- readFile f
   case parse parseDeclList f s of
     Left e -> print e
