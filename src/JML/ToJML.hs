@@ -99,7 +99,7 @@ jmlify :: [ExternalDeclaration] -> [([JMLSyntax], ExternalDeclaration)]
 jmlify extDeclList = map f extDeclList where
   f :: ExternalDeclaration -> ([JMLSyntax], ExternalDeclaration)
   f extDecl@FunDef{isPureFlag, funDecl=FunCallStmt{funCall=FunCallExpr {funName=VarExpr{varName}}}} =
-    let jmlify_ = toJMLs $ getRequireEnsureBehavior (False,Maybe.Nothing,False) extDeclList varName
+    let jmlify_ = toJMLs $ getRequireEnsureBehavior (False,Maybe.Nothing,False) (enforceLocalVariablesEvaluation extDeclList) varName
         purifiedExtDecl = FunDef{funModifier=funModifier extDecl,
                                  isPureFlag=True,
                                  funDecl=funDecl extDecl,
@@ -122,7 +122,7 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
       Just lv@(FunDef _ _ (FunCallStmt (FunCallExpr VarExpr{} funArgs)) _ funBody) ->
         if not called then refineRes $ process0 [] (fromVarExprToString funArgs) (getFunLocalVariables lv) (BoolLiteral True) funBody else
         if enforced then refineRes $ process0 [] (attachFunName1 funName $ fromVarExprToString funArgs) (attachFunName1 funName $ getFunLocalVariables lv) (BoolLiteral True) (attachFunName2 funName funBody)
-        else getRequireEnsureBehavior (called,maybeActualParameters,True) (enforceActualParameters extDeclList funName (fromJust maybeActualParameters)) funName
+        else getRequireEnsureBehavior (called,maybeActualParameters,True) (enforceActualParameterEvaluation extDeclList funName (fromJust maybeActualParameters)) funName
   where
     --process0 is the body of the function.
     --therefore it's of CompStmt
@@ -171,7 +171,7 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
     process2 stmts lv condExpr (BinOpExpr expr1 _ expr2) = process2 stmts lv condExpr expr1 ++ process2 stmts lv condExpr expr2
     process2 stmts lv condExpr (UnOpExpr _ expr) = process2 stmts lv (negate condExpr) expr
     process2 _ lv condExpr FunCallExpr{funName=VarExpr{varName},funArgs} =
-      let rec = getRequireEnsureBehavior (True,Just $ attachVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName
+      let rec = getRequireEnsureBehavior (True,Just $ copulateVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName
       in refineRes $ appendOriginalCondExpr rec varName condExpr
     process2 stmts lv condExpr (CondExpr eiff ethenn elsee) =
       let x1 = process2 stmts lv (appendBoolExprRight condExpr eiff) ethenn
@@ -303,7 +303,7 @@ getEnsures extDeclList stmts funArgs lv a = case a of
   CharLiteral n                                 -> [Just $ JMLExpr a]
   StringLiteral n                               -> [Just $ JMLExpr a]
   Null                                          -> [Just $ JMLExpr Null]
-  FunCallExpr{funName=VarExpr{varName},funArgs} -> process1 (getRequireEnsureBehavior (True,Just $ attachVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName) extDeclList varName funArgs
+  FunCallExpr{funName=VarExpr{varName},funArgs} -> process1 (getRequireEnsureBehavior (True,Just $ copulateVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName) extDeclList varName funArgs
 {-    | isPure extDeclList funName -> process1 (getRequireEnsureBehavior True extDeclList funName) extDeclList funName funArgsList
     | otherwise              -> [Nothing]-}
   VarExpr (Just _) _ _ -> throw $ NoteExcp "{{getEnsures}}: VarExpr (Just _) _ _: why of Just?"

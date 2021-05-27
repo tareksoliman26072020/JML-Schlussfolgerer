@@ -69,12 +69,14 @@ data Types
   = Int
   | Void
   | Char
+  | String
+  | Boolean
   | Double
   | Short
   | Float
   | Long
-  | Boolean
   | Byte
+  
 --  | Exception Exception
   deriving(Eq,Show)
 

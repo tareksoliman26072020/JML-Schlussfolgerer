@@ -50,9 +50,39 @@ public int boo28(){
     return boo27(5);
   }
 }
-public void boo29(){
-  int z = 0;
+public int boo28_2(){
+  try{
+    int x = 0;
+    if(x == 3){
+      throw new Exception("something");
+    }
+    else{
+      return 1;
+    }
+  }
+  catch(Exception e){
+    return boo27(-5);
+  }
+}
+public boolean boo29(){
+  if(true){
+    return false;
+  }
+  else{
+    return true;
+  }
+}
+public void boo30(){
+  int x = 0;
   int y = 0;
+}
+public void boo31(){
+  int x = 0;
+  int y = 0;
+  int z = boo32();
+}
+public int boo32(){
+  throw new Exception("wof");
 }
 public static int sqrt(int y) throws Exception{
   for(int i=0; i<=y; i=i+1){
@@ -68,3 +98,4 @@ public static int sqrt(int y) throws Exception{
     }
   }
 }
+
