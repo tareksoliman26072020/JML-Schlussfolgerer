@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d82bd064360f72f7b9f136332d5a6f01cb509bc15bf945a9f0046f93b032790c
+-- hash: 77c5c932fc53d37c22e6e39c3734986670b44e7da9fa8a60778d11c18d31cad4
 
 name:           JML-Schlussfolgerer
 version:        0.1.0.0
@@ -32,12 +32,8 @@ library
       JML.RefineParsed
       JML.ToJML
       Parser.ParseExpr
-      Parser.ParseExpressions
-      Parser.ParseExternalDeclarations
       Parser.Parser
-      Parser.ParseStatements
       Parser.ParseStmt
-      Parser.PrimitiveFunctionality
       Parser.Print
       Parser.Types
   other-modules:
@@ -48,7 +44,6 @@ library
       base >=4.7 && <5
     , mtl
     , parsec
-    , split
   default-language: Haskell2010
 
 executable JML-Schlussfolgerer-exe
@@ -63,7 +58,6 @@ executable JML-Schlussfolgerer-exe
     , base >=4.7 && <5
     , mtl
     , parsec
-    , split
   default-language: Haskell2010
 
 test-suite JML-Schlussfolgerer-test
@@ -79,5 +73,4 @@ test-suite JML-Schlussfolgerer-test
     , base >=4.7 && <5
     , mtl
     , parsec
-    , split
   default-language: Haskell2010

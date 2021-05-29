@@ -37,7 +37,7 @@ data Expression
   | AssignExpr {assEleft :: Expression, assEright :: Expression}
   | ExcpExpr {excpName :: Exception, excpmsg :: Maybe String}
   | ReturnExpr {returnE :: Maybe Expression}
-  deriving (Eq, Show)
+  deriving (Eq,Show)
 
 data Statement
   = CompStmt {statements :: [Statement]}

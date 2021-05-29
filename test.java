@@ -72,17 +72,29 @@ public boolean boo29(){
     return true;
   }
 }
-public void boo30(){
-  int x = 0;
-  int y = 0;
+public int boo30(int z){
+  int x1 = 0;
+  int x2 = 0;
+  y = 0;
+  y1 = 0;
+  y2 = 0;
+  if(z>=0){
+    t1 = 7;
+    return t1;
+  }
+  else{
+    t2 = 17;
+    return t2;
+  }
 }
-public void boo31(){
-  int x = 0;
-  int y = 0;
-  int z = boo32();
+public int boo31(){
+  z = 0;
+  int x = z;
+  return x;
 }
 public int boo32(){
-  throw new Exception("wof");
+  int x = y1 + y2 + y3;
+  return x;
 }
 public static int sqrt(int y) throws Exception{
   for(int i=0; i<=y; i=i+1){

@@ -4,8 +4,7 @@ import Parser.Types
 import Prelude hiding(negate)
 import Control.Exception(throw)
 import Data.Maybe(isNothing, fromJust, isJust,mapMaybe)
-import Parser.ParseExternalDeclarations
-import Data.List.Split(splitOn)
+import Data.List(intercalate,foldl')
 import Text.Printf
 
 findParsedFunction :: String -> [ExternalDeclaration] -> Maybe ExternalDeclaration
@@ -65,6 +64,137 @@ getCompStmtLocalVariables' = mapMaybe f1
     f1 :: Statement -> Maybe Expression
     f1 (AssignStmt _ assign) = Just assign
     f1 _                     = Nothing
+
+-- extracts mentioned global variables in a list of statements given in a CompStmt
+-- parameters and local variables will be excluded
+-- variables which are assigned more than once will be excluded as well, because they could be mistaken with global variables.
+-- And because a global variables can be re-assigned in the same context, duplicates may occur which are to be eliminated.
+-- The output is exclusively of AssignExpr.
+getGlobalVariables :: [Statement] -> [Expression] -> [Expression]
+getGlobalVariables stmts params =
+  let assigns = getCompStmtLocalVariables' stmts -- no variable is mentioned twice
+      combined_filtered = filter (\case
+        a@AssignExpr{assEleft=b@VarExpr{}} | not (any (\case
+          c@VarExpr{}    -> isJust (varType c) && varName c == varName b
+          c@AssignExpr{} -> isJust (varType $ assEleft c) && varName (assEleft c) == varName b) (assigns ++ params))
+                                                  -> isNothing (varType b)
+        _                                         -> False) (assigns ++ params)
+      removeDuplicates = foldr (\r l ->
+        let var_name = (varName $ assEleft r)
+        in if any (\ass -> varName (assEleft ass) == var_name) l
+             then l
+           else r:l) [] combined_filtered
+  in removeDuplicates --throw $ NoteExcp $ printf $ intercalate "\n" $ map show removeDuplicates
+
+getAllGlobalVariable :: ExternalDeclaration -> [[Expression]]
+getAllGlobalVariable extDecl@FunDef{} =
+  let params = funArgs $ funCall $ funDecl extDecl
+      prime  = head $ f params (funBody extDecl)
+      allButMain = concatMap (f params) (statements $ funBody extDecl)
+  in  if null allButMain then [prime]
+      else map (prime ++) allButMain
+  where
+    f :: [Expression] -> Statement -> [[Expression]]
+    --CompStmt {statements :: [Statement]}
+    f params a@CompStmt{} = [getGlobalVariables (statements a) params]
+    f _ VarStmt{} = []
+    f _ AssignStmt{} = []
+    --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}
+    f params a@CondStmt{} = getGlobalVariables (statements $ siff a) params :
+                            getGlobalVariables (statements $ selsee a) params : []
+    --ForStmt {acc :: Statement, cond :: Expression, step :: Statement, forBody :: Statement}
+    f params a@ForStmt{} = [getGlobalVariables (statements $ forBody a) params]
+    --WhileStmt {condition :: Expression, whileBody :: Statement}
+    f params a@WhileStmt{} = [getGlobalVariables (statements $ whileBody a) params]
+    f _ a@FunCallStmt {} = []
+    {-TryCatchStmt {tryBody :: Statement,
+                        catchExcp :: Type Exception, catchBody :: Statement,
+                        finallyBody :: Statement}-}
+    f params a@TryCatchStmt{} = getGlobalVariables (statements $ tryBody a) params :
+                                getGlobalVariables (statements $ catchBody a) params :
+                                getGlobalVariables (statements $ finallyBody a) params : []
+    f _ a@ReturnStmt{} = []
+
+-- does an unconventional thing of finding global variables, and giving them a type "Global"
+-- in order for the functionality in ToJML.hs to acknowledge their existence.
+-- This is being done this way, because batching/refactoring ToJML.hs in a way which allows
+-- the recognition of global variables has been unsuccessful.
+-- That's why the goal here is to make global variables not more global, being giving them a type.
+-- After applying this function and in case global variables comes up while jmlifing:
+--   new local variables will come into being, which are of type (Class),
+--   and they'll be assigned with "this." followd with the name of this variable.
+{-
+example:
+public int foo(){
+  z = 0;
+  return 9;
+}
+
+becomes:
+
+public int foo(){
+  Global z = 0;
+  return 9;
+}
+-}
+highlightGlobalVariables :: ExternalDeclaration -> ExternalDeclaration
+highlightGlobalVariables extDecl =
+  let stmts = statements $ funBody extDecl
+      args = funArgs $ funCall $ funDecl extDecl
+      localV = getCompStmtLocalVariables'' {- (map varName args) -} stmts
+      highlightGlobalV = highlightGlobalVariables' stmts (map varName args) localV
+  in FunDef{funModifier = funModifier extDecl,
+            isPureFlag  = isPureFlag extDecl,
+            funDecl     = funDecl extDecl,
+            throws      = throws extDecl,
+            funBody     = CompStmt highlightGlobalV}
+  where
+    getCompStmtLocalVariables'' :: [Statement] -> [String]
+    getCompStmtLocalVariables'' = foldl' f1 []
+
+    highlightGlobalVariables' :: [Statement] -> [String] -> [String] -> [Statement]
+    highlightGlobalVariables' stmts args localV = concatMap (f2 args localV) stmts
+
+    highlightRight :: [String] -> [String] -> Expression -> [Statement]
+    highlightRight args localV expr = case expr{-assEright $ assign a-} of
+      IntLiteral _ -> []
+      BoolLiteral _ -> []
+      CharLiteral _ -> []
+      StringLiteral _ -> []
+      Null -> []
+      b@VarExpr{} | all (varName b `notElem`) [args,localV] -> [AssignStmt{varModifier = [],
+                                                                           assign = AssignExpr{assEleft = VarExpr {varType = Just (AnyType{typee="Class",generic=Nothing}),
+                                                                                                                   varObj  = varObj b,
+                                                                                                                   varName = varName b},
+                                                                                               assEright = StringLiteral ("this." ++ varName b)}}]
+      b@BinOpExpr{} -> highlightRight args localV (expr1 b) ++ highlightRight args localV (expr2 b)
+      b@UnOpExpr{expr=expr'}  -> highlightRight args localV expr'
+      CondExpr{} -> undefined
+      _ -> []
+    -- is meant as high-order function for getting local variables
+    f1 :: [String] -> Statement -> [String]
+    f1 acc a@VarStmt{} | isJust $ varType $ var a{- && (varName $ var a) `notElem` args-} = acc ++ [varName $ var a]
+    f1 acc a@AssignStmt{} = f1 acc (VarStmt (assEleft $ assign a))
+    f1 acc _ = acc
+
+
+    f2 :: [String] -> [String] -> Statement -> [Statement]
+    f2 args localV a@VarStmt{}
+      | all ((varName $ var a) `notElem`) [args,localV] = [VarStmt{var     = VarExpr {varType=Just (AnyType{typee="Class",generic=Nothing}),
+                                                                   varObj  = varObj (var a),
+                                                                   varName = varName (var a)}}]
+    f2 args localV a@CompStmt{} = [CompStmt{statements = highlightGlobalVariables' (statements a) args (localV ++ getCompStmtLocalVariables'' (statements a))}]
+    f2 args localV a@AssignStmt{} =
+      highlightRight args localV (assEright $ assign a)
+        ++ [AssignStmt{varModifier = varModifier a,
+                       assign      = AssignExpr{assEleft  = var $ head (f2 args localV (VarStmt $ assEleft $ assign a)),
+                                                assEright = assEright $ assign a}}]
+    --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}
+    f2 args localV a@CondStmt{} = highlightRight args localV (condition a) ++
+                                  [CondStmt{condition = condition a,
+                                            siff = head $ f2 args localV (siff a),
+                                            selsee = head $ f2 args localV (selsee a)}]
+    f2 _ _ a = [a]
 
 --this negates an BinOp,UnOp,BoolLiteral expression
 negate :: Expression -> Expression
@@ -185,14 +315,13 @@ enforceActualParameterEvaluation extDeclList funName params = map f1 extDeclList
 -- resembles `enforceActualParameterEvaluation`.
 -- Difference is: While `enforceActualParameterEvaluation` minds the actual parameters and the function's local variables,
 -- it minds only local functions
-enforceLocalVariablesEvaluation :: [ExternalDeclaration] -> [ExternalDeclaration]
-enforceLocalVariablesEvaluation = map $
-  \case a@FunDef{funBody=CompStmt statements} ->
-          FunDef{funModifier = funModifier a,
-                 isPureFlag = isPureFlag a,
-                 funDecl = funDecl a,
-                 throws = throws a,
-                 funBody = CompStmt (enforceEvaluation statements (getCompStmtLocalVariables' statements))}
+enforceLocalVariablesEvaluation :: ExternalDeclaration -> ExternalDeclaration
+enforceLocalVariablesEvaluation a@FunDef{funBody=CompStmt statements} =
+  FunDef{funModifier = funModifier a,
+         isPureFlag = isPureFlag a,
+         funDecl = funDecl a,
+         throws = throws a,
+         funBody = CompStmt (enforceEvaluation statements (getCompStmtLocalVariables' statements))}
 
 -- is meant to be use in `enforceActualParameterEvaluation`, `enforceLocalVariablesEvaluation`
 -- takes the actual parameters/local variables into consideration to alter the function's statements
