@@ -333,43 +333,28 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     -- Due to the fact, the other nested statements could, be found, then this will be also examined
     f2 :: Statement -> [Expression] -> Statement
     f2 a@CondStmt{} localVars
-      -- alter if
-      | (lookUpVar' a localVars == Just 1 || lookUpVar' a localVars == Just 2) &&
+      | isJust (lookUpVar' a localVars) &&
         cannotEvaluate (condition a) (fromJust $ lookUpVar' a localVars) =
-          let newCondition = case (condition a,lookUpVar' a localVars) of
-                               (BinOpExpr{},Just 1) -> BinOpExpr {expr1 = insertActualParameter (expr1 $ condition a) localVars,
-                                                                  binOp = binOp $ condition a,
-                                                                  expr2 = expr2 $ condition a}
-                               (BinOpExpr{},Just 2) -> BinOpExpr {expr1 = expr1 $ condition a,
-                                                                  binOp = binOp $ condition a,
-                                                                  expr2 = insertActualParameter (expr2 $ condition a) localVars}
-                               (UnOpExpr{},Just 1) -> UnOpExpr {unOp = unOp $ condition a,
-                                                                expr = insertActualParameter (expr $ condition a) localVars}
+          let newCondition = insertActualParameter (condition a) localVars
               CompStmt{statements = theIfs} = siff a
               CompStmt{statements = theElses} = selsee a
           in CondStmt {condition = newCondition,
                        siff      = CompStmt{statements = enforceEvaluation theIfs (localVars ++ getCompStmtLocalVariables' theIfs)},
                        selsee    = CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}}
-      | lookUpVar' a localVars == Just 2 =
-          case condition a of
-            BinOpExpr{} ->
-              let newCondition = BinOpExpr {expr1 = expr1 $ condition a,
-                                            binOp = binOp $ condition a,
-                                            expr2 = insertActualParameter (expr2 $ condition a) localVars}
-                  CompStmt{statements = theIfs} = siff a
-                  CompStmt{statements = theElses} = selsee a
-              in CondStmt{condition = newCondition,
-                          siff      = CompStmt{statements = enforceEvaluation theIfs (localVars ++ getCompStmtLocalVariables' theIfs)},
-                          selsee    = CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}}
+      -- delete if
       | fst (evaluate_if_else (condition a) localVars) &&
-        fst (snd $ evaluate_if_else (condition a) localVars) = CondStmt{condition = condition a,
-                                                                        siff = CompStmt{statements=[]},
-                                                                        selsee = selsee a}
-      -- alter else
+        fst (snd $ evaluate_if_else (condition a) localVars) =
+          let CompStmt{statements = theElses} = selsee a
+          in CondStmt{condition = BoolLiteral False,
+                      siff = CompStmt{statements=[]},
+                      selsee = CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}}
+      -- delete else
       | fst (evaluate_if_else (condition a) localVars) &&
-        snd (snd $ evaluate_if_else (condition a) localVars) = CondStmt{condition = condition a,
-                                                                        siff = siff a,
-                                                                        selsee = CompStmt{statements=[]}}
+        snd (snd $ evaluate_if_else (condition a) localVars) =
+          let CompStmt{statements = theIfs} = siff a
+          in CondStmt{condition = BoolLiteral True,
+                      siff = CompStmt{statements = enforceEvaluation theIfs (localVars ++ getCompStmtLocalVariables' theIfs)},
+                      selsee = CompStmt{statements=[]}}
       -- alter body of if and else in case the seeked CondStmt is nested
       | not (fst $ evaluate_if_else (condition a) localVars) =
           let CompStmt{statements = theIfs}   = siff a
@@ -385,7 +370,7 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
                  forBody = CompStmt{statements = enforceEvaluation orgBody (localVars ++ getCompStmtLocalVariables' orgBody)}}
     f2 a@WhileStmt{} localVars =
       let CompStmt{statements = orgBody} = whileBody a
-      in WhileStmt{condition = condition a,
+      in WhileStmt{condition = insertActualParameter (condition a) localVars,
                    whileBody = CompStmt{statements = enforceEvaluation orgBody (localVars ++ getCompStmtLocalVariables' orgBody)}}
     f2 a@TryCatchStmt{} localVars =
       let CompStmt{statements = tryOrgBody} = tryBody a
@@ -395,6 +380,7 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
                       catchExcp = catchExcp a,
                       catchBody = CompStmt{statements = enforceEvaluation catchOrgBody (localVars ++ getCompStmtLocalVariables' catchOrgBody)},
                       finallyBody = CompStmt{statements = enforceEvaluation finallyOrgBody (localVars ++ getCompStmtLocalVariables' finallyOrgBody)}}
+    f2 ReturnStmt{returnS = Just a} localVars = ReturnStmt{returnS = Just $ insertActualParameter a localVars} --throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show $ insertActualParameter a localVars)
     f2 stmt localVars = stmt
 
     -- it examines the if-else statement, to know whether it's the one whose body should be altered.
@@ -444,6 +430,7 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
       StringLiteral _ -> False
       CharLiteral _ -> False
       _ -> True
+
     -- looks up the arguments in the given list of parameters/local variables
     -- If the two passed expressions are uneffected by this list, then its return is Nothing
     -- If the first passed argument has a parameter, then its return is Just 1
@@ -468,7 +455,8 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     lookUpVar' a@CondStmt{condition=b@BinOpExpr{}} localVars = lookUpVar (expr1 b) (expr2 b) localVars
     lookUpVar' a@CondStmt{condition=b@UnOpExpr{}} localVars  = lookUpVar'' (expr b) localVars
 
-    -- checks whether an Expression is mentioned in the list of actual parameters/local variables
+    -- checks whether an Expression is mentioned in the list of actual parameters/local variables.
+    -- It works recursively.
     hasParam :: Expression -> [Expression] -> Bool
     hasParam (IntLiteral _)  _ = False
     hasParam (BoolLiteral _) _ = False
@@ -489,9 +477,37 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     -- replaces VarExpr with the correspondent literal taken from the list of actual parameters/local variables
     insertActualParameter :: Expression -> [Expression] -> Expression
     insertActualParameter a@VarExpr{} localVars =
-      let filtered = filter (\case AssignExpr{assEleft=b@VarExpr{}} -> varName a == varName b) localVars
+      let filtered = filter (\case
+            AssignExpr{assEleft=b@VarExpr{}} -> varName a == varName b) localVars
       in if null filtered then a
          else assEright (head filtered)
+    insertActualParameter a@BinOpExpr{} localVars =
+      let a2 = BinOpExpr{expr1 = insertActualParameter (expr1 a) localVars,
+                         binOp = binOp a,
+                         expr2 = insertActualParameter (expr2 a) localVars}
+          lookedUp = lookUpVar (expr1 a2) (expr2 a2) localVars
+      in if isJust lookedUp || all isLiteral [expr1 a2, expr2 a2]
+           then evaluate' (expr1 a2) (binOp a2) (expr2 a2)
+         else a2--throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show $ evaluate' (expr1 a2) (binOp a2) (expr2 a2))
+    insertActualParameter a@UnOpExpr{} localVars =
+      let inserted = insertActualParameter (expr a) localVars
+          lookedUp = lookUpVar'' inserted localVars
+      in if isJust lookedUp
+           then evaluate inserted localVars
+         else inserted
+    insertActualParameter a@FunCallExpr{} localVar =
+      let list = map (`insertActualParameter` localVars) (funArgs a)
+      in FunCallExpr {funName = funName a,
+                      funArgs = list}
+    insertActualParameter a@CondExpr{} localVars =
+      CondExpr {eiff = insertActualParameter (eiff a) localVars,
+                ethenn = insertActualParameter (ethenn a) localVars,
+                eelsee = insertActualParameter (eelsee a) localVars}
+    insertActualParameter a@AssignExpr{} localVars =
+      AssignExpr {assEleft = assEleft a,
+                  assEright = insertActualParameter (assEright a) localVars}
+    insertActualParameter a@ReturnExpr{returnE = Just aa} localVars = insertActualParameter aa localVars
+    insertActualParameter a _ = a
 
     boolBinOpEvaluate :: [Expression] -> Expression -> BinOp -> Expression -> Bool
     boolBinOpEvaluate localVars expr1 binOp expr2 = case evaluate' (evaluate expr1 localVars) binOp (evaluate expr2 localVars) of
@@ -503,7 +519,8 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
       BoolLiteral True -> False
       BoolLiteral False -> True
 
-    -- evaluates an expression by turning it to its correspondent literal value
+    -- evaluates an expression by turning it to its correspondent literal value.
+    -- This function is used while fully knowing that the expression CAN be evaluated
     evaluate :: Expression -> [Expression] -> Expression
     evaluate a@(IntLiteral _) _ = a
     evaluate a@(StringLiteral _) _ = a
@@ -650,6 +667,12 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     ofSimilarTypes (StringLiteral _) (StringLiteral _) = Just String
     ofSimilarTypes (StringLiteral _) _                 = Nothing
 
+    isLiteral :: Expression -> Bool
+    isLiteral (IntLiteral _) = True
+    isLiteral (BoolLiteral _) = True
+    isLiteral (CharLiteral _) = True
+    isLiteral (StringLiteral _) = True
+    isLiteral _ = False
 -- copulate each parameter with its actual value
 -- in case the function with the passed name was internally called
 copulateVarNameToActualParameters :: [ExternalDeclaration] -> String -> [Expression] -> [Expression]

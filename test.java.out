@@ -65,12 +65,21 @@ public int boo25(int i){
 }
 
 /*@ normal behavior
-  @ requires boo27$i>=0;
+  @ requires true;
   @ assignable \nothing;
-  @ ensures \result = boo27$i;
+  @ ensures \result = 5;
   @*/
 public /*@ pure @*/ int boo26(){
   return boo27(5);
+}
+
+/*@ normal behavior
+  @ requires true;
+  @ assignable \nothing;
+  @ ensures \result = 1;
+  @*/
+public /*@ pure @*/ int boo26_2(){
+  return boo27(-1);
 }
 
 /*@ normal behavior
@@ -94,13 +103,13 @@ public /*@ pure @*/ int boo27(int i){
 }
 
 /*@ exceptional behavior
-  @ requires x==3;
+  @ requires true;
   @ signals Exception;
   @ also
   @ normal behavior
-  @ requires boo27$i>=0;
+  @ requires true;
   @ assignable \nothing;
-  @ ensures \result = boo27$i;
+  @ ensures \result = 5;
   @*/
 public int boo28(){
   try{
@@ -118,14 +127,14 @@ public int boo28(){
 }
 
 /*@ normal behavior
-  @ requires x!=3;
+  @ requires true;
   @ assignable \nothing;
   @ ensures \result = 1;
   @ also
   @ normal behavior
-  @ requires boo27$i<0;
+  @ requires true;
   @ assignable \nothing;
-  @ ensures \result = (-1)*boo27$i;
+  @ ensures \result = 5;
   @*/
 public int boo28_2(){
   try{
@@ -160,19 +169,19 @@ public /*@ pure @*/ boolean boo29(){
   @ requires z>=0;
   @ assignable y, y1, y2, t1;
   @ ensures \result = 7 &&
-  @                   this.y=0 &&
-  @                   this.y1=0 &&
-  @                   this.y2=0 &&
-  @                   this.t1=7;
+  @         this.y=0 &&
+  @         this.y1=0 &&
+  @         this.y2=0 &&
+  @         this.t1=7;
   @ also
   @ normal behavior
   @ requires z<0;
   @ assignable y, y1, y2, t2;
   @ ensures \result = 17 &&
-  @                   this.y=0 &&
-  @                   this.y1=0 &&
-  @                   this.y2=0 &&
-  @                   this.t2=17;
+  @         this.y=0 &&
+  @         this.y1=0 &&
+  @         this.y2=0 &&
+  @         this.t2=17;
   @*/
 public int boo30(int z){
   int x1 = 0;
@@ -194,12 +203,24 @@ public int boo30(int z){
   @ requires true;
   @ assignable z;
   @ ensures \result = 0 &&
-  @                   this.z=0;
+  @         this.z=0;
   @*/
 public int boo31(){
   z = 0;
   int x = z;
   return x;
+}
+
+/*@ normal behavior
+  @ requires true;
+  @ assignable z;
+  @ ensures \result = 7 &&
+  @         this.z=0;
+  @*/
+public int boo31_2(){
+  z = 0;
+  int x = z;
+  return boo30(1);
 }
 
 /*@ normal behavior

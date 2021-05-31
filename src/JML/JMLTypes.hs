@@ -36,7 +36,7 @@ ppJML indent input output =
 
 ppEnsures :: String -> String
 ppEnsures input = ppEnsures' input ""
-  where ppEnsures' inp outp = ppJML 18 inp outp
+  where ppEnsures' inp outp = ppJML 8 inp outp
 
 ppRequires :: String -> String
 ppRequires input = ppRequires' input ""

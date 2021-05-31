@@ -27,6 +27,9 @@ public int boo25(int i){
 public int boo26(){
   return boo27(5);
 }
+public int boo26_2(){
+  return boo27(-1);
+}
 public int boo27(int i){
   if(i >= 0){
     return i;
@@ -92,6 +95,11 @@ public int boo31(){
   int x = z;
   return x;
 }
+public int boo31_2(){
+  z = 0;
+  int x = z;
+  return boo30(1);
+}
 public int boo32(){
   int x = y1 + y2 + y3;
   return x;
@@ -110,4 +118,5 @@ public static int sqrt(int y) throws Exception{
     }
   }
 }
+
 
