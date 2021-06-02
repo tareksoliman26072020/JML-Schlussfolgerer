@@ -86,13 +86,13 @@ public /*@ pure @*/ int boo27(int i){
 }
 
 /*@ exceptional behavior
-  @ requires x==3;
+  @ requires true;
   @ signals Exception;
   @ also
   @ normal behavior
-  @ requires boo27$i>=0;
+  @ requires true;
   @ assignable \nothing;
-  @ ensures \result = boo27$i;
+  @ ensures \result = 5;
   @*/
 public int boo28(){
   try{
@@ -106,6 +106,31 @@ public int boo28(){
   }
   catch(Exception e){
     return boo27(5);
+  }
+}
+
+/*@ normal behavior
+  @ requires true;
+  @ assignable \nothing;
+  @ ensures \result = 1;
+  @ also
+  @ normal behavior
+  @ requires true;
+  @ assignable \nothing;
+  @ ensures \result = 5;
+  @*/
+public int boo28_2(){
+  try{
+    int x = 0;
+    if(x == 3){
+      throw new Exception("something");
+    }
+    else{
+      return 1;
+    }
+  }
+  catch(Exception e){
+    return boo27(-5);
   }
 }
 ```

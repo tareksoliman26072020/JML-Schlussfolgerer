@@ -39,6 +39,13 @@ data Expression
   | ReturnExpr {returnE :: Maybe Expression}
   deriving (Eq,Show)
 
+isLiteral :: Expression -> Bool
+isLiteral (IntLiteral _) = True
+isLiteral (BoolLiteral _) = True
+isLiteral (CharLiteral _) = True
+isLiteral (StringLiteral _) = True
+isLiteral _ = False
+
 data Statement
   = CompStmt {statements :: [Statement]}
   | VarStmt {var :: Expression}

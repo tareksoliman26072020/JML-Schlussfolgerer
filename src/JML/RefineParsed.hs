@@ -667,12 +667,6 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     ofSimilarTypes (StringLiteral _) (StringLiteral _) = Just String
     ofSimilarTypes (StringLiteral _) _                 = Nothing
 
-    isLiteral :: Expression -> Bool
-    isLiteral (IntLiteral _) = True
-    isLiteral (BoolLiteral _) = True
-    isLiteral (CharLiteral _) = True
-    isLiteral (StringLiteral _) = True
-    isLiteral _ = False
 -- copulate each parameter with its actual value
 -- in case the function with the passed name was internally called
 copulateVarNameToActualParameters :: [ExternalDeclaration] -> String -> [Expression] -> [Expression]
