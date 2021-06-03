@@ -107,16 +107,14 @@ public int boo32(){
 public static int sqrt(int y) throws Exception{
   for(int i=0; i<=y; i=i+1){
     int j = i*i;
-    if(j==y){
+    if(i*5/5+6-6==y && true && true || false || y==i*5/5+6-6){
       return i;
     }
     else{
-      if(i==y){
+        if(((((((i*5)/5)+6)-6)==y)&&(true&&true))||(false||false)){
 	throw new Exception("not found");
       }
       else{}
     }
   }
 }
-
-

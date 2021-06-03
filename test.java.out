@@ -1,60 +1,21 @@
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
-public /*@ pure @*/ int boo21(){
+public int boo21(){
   return 5;
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
-public /*@ pure @*/ int boo22(){
+public int boo22(){
   return boo21();
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
-public /*@ pure @*/ int boo22_2(){
+public int boo22_2(){
   int x = boo21();
   return x;
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 3+5;
-  @*/
-public /*@ pure @*/ int boo23(){
+public int boo23(){
   int x = 3 + boo21();
   return x;
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 3+6;
-  @*/
 public int boo24(){
   int x = 3 + boo25(5);
   return x;
 }
-
-/*@ exceptional behavior
-  @ requires i>10;
-  @ signals Exception;
-  @ also
-  @ normal behavior
-  @ requires i<=10;
-  @ assignable \nothing;
-  @ ensures \result = 6;
-  @*/
 public int boo25(int i){
   if(i > 10){
     throw new Exception("meow");
@@ -63,36 +24,13 @@ public int boo25(int i){
     return 6;
   }
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
-public /*@ pure @*/ int boo26(){
+public int boo26(){
   return boo27(5);
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 1;
-  @*/
-public /*@ pure @*/ int boo26_2(){
+public int boo26_2(){
   return boo27(-1);
 }
-
-/*@ normal behavior
-  @ requires i>=0;
-  @ assignable \nothing;
-  @ ensures \result = i;
-  @ also
-  @ normal behavior
-  @ requires i<0;
-  @ assignable \nothing;
-  @ ensures \result = (-1)*i;
-  @*/
-public /*@ pure @*/ int boo27(int i){
+public int boo27(int i){
   if(i >= 0){
     return i;
   }
@@ -101,16 +39,6 @@ public /*@ pure @*/ int boo27(int i){
     return res;
   }
 }
-
-/*@ exceptional behavior
-  @ requires true;
-  @ signals Exception;
-  @ also
-  @ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
 public int boo28(){
   try{
     int x = 3;
@@ -125,17 +53,6 @@ public int boo28(){
     return boo27(5);
   }
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 1;
-  @ also
-  @ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = 5;
-  @*/
 public int boo28_2(){
   try{
     int x = 0;
@@ -150,13 +67,7 @@ public int boo28_2(){
     return boo27(-5);
   }
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = false;
-  @*/
-public /*@ pure @*/ boolean boo29(){
+public boolean boo29(){
   if(true){
     return false;
   }
@@ -164,25 +75,6 @@ public /*@ pure @*/ boolean boo29(){
     return true;
   }
 }
-
-/*@ normal behavior
-  @ requires z>=0;
-  @ assignable y, y1, y2, t1;
-  @ ensures \result = 7 &&
-  @         this.y=0 &&
-  @         this.y1=0 &&
-  @         this.y2=0 &&
-  @         this.t1=7;
-  @ also
-  @ normal behavior
-  @ requires z<0;
-  @ assignable y, y1, y2, t2;
-  @ ensures \result = 17 &&
-  @         this.y=0 &&
-  @         this.y1=0 &&
-  @         this.y2=0 &&
-  @         this.t2=17;
-  @*/
 public int boo30(int z){
   int x1 = 0;
   int x2 = 0;
@@ -198,64 +90,30 @@ public int boo30(int z){
     return t2;
   }
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable z;
-  @ ensures \result = 0 &&
-  @         this.z=0;
-  @*/
 public int boo31(){
   z = 0;
   int x = z;
   return x;
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable z;
-  @ ensures \result = 7 &&
-  @         this.z=0;
-  @*/
 public int boo31_2(){
   z = 0;
   int x = z;
   return boo30(1);
 }
-
-/*@ normal behavior
-  @ requires true;
-  @ assignable \nothing;
-  @ ensures \result = (this.y1)+(this.y2)+(this.y3);
-  @*/
 public int boo32(){
   int x = (y1 + y2) + y3;
   return x;
 }
-
-/*@ normal behavior
-  @ requires i<=y &&
-  @          i*i==y;
-  @ assignable \nothing;
-  @ ensures \result = i;
-  @ also
-  @ exceptional behavior
-  @ requires i<=y &&
-  @          i*i!=y &&
-  @          i==y;
-  @ signals Exception;
-  @*/
 public static int sqrt(int y) throws Exception{
   for(int i = 0; i <= y; i = i + 1){
     int j = i * i;
-    if(j == y){
+    if((((((((((((((i * 5) / 5) + 6) - 6) == y) && true) && true) || false) || y) == i) * 5) / 5) + 6) - 6){
       return i;
     }
     else{
-      if(i == y){
+      if(((((((i * 5) / 5) + 6) - 6) == y) && (true && true)) || (false || false)){
         throw new Exception("not found");
       }
     }
   }
 }
-

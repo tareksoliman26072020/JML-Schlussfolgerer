@@ -1,13 +1,9 @@
 import Parser.ParseStmt (parseDeclList)
-import JML.ToJML(jmlify,toJML)
 import Parser.Print (showDecl)
-import Data.List(foldl')
-import Text.Printf(printf)
 import Text.ParserCombinators.Parsec (parse)
 
 main :: IO ()
-main = mapM_ run
-  ["test" ++ n ++ ".java" | n <- [""]]
+main = run "test.java"
 
 run :: String -> IO ()
 run file = do
@@ -15,16 +11,5 @@ run file = do
   s <- readFile file
   case parse parseDeclList file s of
     Left e -> print e
-    Right extDeclList -> do
-      let jmlified = jmlify extDeclList
-          prettyP = foldl' (\acc (jml,extDecl) -> acc ++ toJML jml ++ "\n" ++ showDecl extDecl ++ "\n\n") "" jmlified
-          line = replicate (16 + length o) '-'
-          doneMsg = printf "|%s|\n\
-                           \|%s|\n\
-                           \File is created: %s\n\
-                           \|%s|\n\
-                           \|%s|\n"
-                    line line o line line
-
-      writeFile o prettyP
-      putStrLn prettyP <* putStrLn doneMsg
+    Right extDeclList ->
+      writeFile o . unlines $ map showDecl extDeclList
