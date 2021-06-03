@@ -4,7 +4,7 @@ import Parser.Types
 import Prelude hiding(negate)
 import Control.Exception(throw)
 import Data.Maybe(isNothing, fromJust, isJust,mapMaybe)
-import Data.List(intercalate,foldl')
+import Data.List(foldl')
 import Text.Printf
 
 findParsedFunction :: String -> [ExternalDeclaration] -> Maybe ExternalDeclaration
@@ -156,7 +156,7 @@ highlightGlobalVariables extDecl =
     highlightGlobalVariables' stmts args localV = concatMap (f2 args localV) stmts
 
     highlightRight :: [String] -> [String] -> Expression -> [Statement]
-    highlightRight args localV expr = case expr{-assEright $ assign a-} of
+    highlightRight args localV expr = case expr of
       IntLiteral _ -> []
       BoolLiteral _ -> []
       CharLiteral _ -> []
@@ -168,7 +168,7 @@ highlightGlobalVariables extDecl =
                                                                                                                    varName = varName b},
                                                                                                assEright = StringLiteral ("this." ++ varName b)}}]
       b@BinOpExpr{} -> highlightRight args localV (expr1 b) ++ highlightRight args localV (expr2 b)
-      b@UnOpExpr{expr=expr'}  -> highlightRight args localV expr'
+      UnOpExpr{expr=expr'}  -> highlightRight args localV expr'
       CondExpr{} -> undefined
       _ -> []
     -- is meant as high-order function for getting local variables
@@ -199,7 +199,7 @@ highlightGlobalVariables extDecl =
 --this negates an BinOp,UnOp,BoolLiteral expression
 negate :: Expression -> Expression
 negate (BoolLiteral bool) = BoolLiteral $ not bool
-negate a@(BinOpExpr expr1 binOp expr2) | binOp == And || binOp == Or =
+negate (BinOpExpr expr1 binOp expr2) | binOp == And || binOp == Or =
   let newBinOp :: BinOp -> BinOp
       newBinOp And = Or
       newBinOp Or  = And
@@ -218,7 +218,7 @@ negate (UnOpExpr _ expr) = expr
 negate expr = throw $ NoteExcp $ printf "{{negate}}: {{invalid Expression}}:\n %s" (show expr)
 
 appendBoolExprRight :: Expression -> Expression -> Expression
-appendBoolExprRight expr1 expr2 = BinOpExpr expr1 And expr2
+appendBoolExprRight = (`BinOpExpr` And)
 
 appendBoolExprLeft :: Expression -> Expression -> Expression
 appendBoolExprLeft expr (BinOpExpr expr1 binOp expr2) = BinOpExpr (appendBoolExprLeft expr expr1) binOp expr2

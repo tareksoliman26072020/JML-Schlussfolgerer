@@ -9,7 +9,7 @@ import Prelude hiding(negate)
 import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
-import Data.List(intercalate,foldl',isInfixOf,(\\))
+import Data.List(intercalate,foldl',(\\))
 import Data.Either(partitionEithers, fromRight)
 import Control.Applicative(optional)
 import Parser.Print
@@ -251,16 +251,16 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
 
     getOriginalFunName :: String -> String
     getOriginalFunName str
-      | not (isInfixOf "$" str) = str
+      | '$' `notElem` str = str
       | otherwise = takeWhile (/='$') str
 
 --Übergeben wird ist die Liste der Statements, in der sich das übergebene Expression befindet
 getEnsures :: [ExternalDeclaration] -> [Statement] -> [String] -> [String] -> Expression -> [Maybe JMLExpr]
 getEnsures extDeclList stmts funArgs lv a = case a of
-  IntLiteral n                                  -> [Just $ JMLExpr a]
-  BoolLiteral n                                 -> [Just $ JMLExpr a]
-  CharLiteral n                                 -> [Just $ JMLExpr a]
-  StringLiteral n                               -> [Just $ JMLExpr a]
+  IntLiteral _                                  -> [Just $ JMLExpr a]
+  BoolLiteral _                                 -> [Just $ JMLExpr a]
+  CharLiteral _                                 -> [Just $ JMLExpr a]
+  StringLiteral _                               -> [Just $ JMLExpr a]
   Null                                          -> [Just $ JMLExpr Null]
   FunCallExpr{funName=VarExpr{varName},funArgs} -> process1 (getRequireEnsureBehavior (True,Just $ copulateVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName) extDeclList varName funArgs
 {-    | isPure extDeclList funName -> process1 (getRequireEnsureBehavior True extDeclList funName) extDeclList funName funArgsList
@@ -305,9 +305,8 @@ getEnsures extDeclList stmts funArgs lv a = case a of
 
 toJMLs :: Bool -> [[Expression]] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [JMLSyntax]
 toJMLs whetherPure globalVAssignExpr list = --throw $ NoteExcp $ printf "\n____\n%s\n____\n" (show whetherPure)
-  let concatAllGlobals = concatMap (map (varName . assEleft)) globalVAssignExpr
-      allGlobalStringLists = map (map(varName . assEleft)) globalVAssignExpr
-  in map (f allGlobalStringLists) (zip list [0 ..])
+  let allGlobalStringLists = map (map(varName . assEleft)) globalVAssignExpr
+  in zipWith (curry (f allGlobalStringLists)) list [0 ..]
   where
     f :: [[String]] -> ((Maybe Exception,JMLExpr,Maybe JMLExpr),Int) -> JMLSyntax
     f allGlobalStringLists ((Maybe.Nothing,jml1,Just (JMLExpr jml2)),i) =
@@ -317,8 +316,7 @@ toJMLs whetherPure globalVAssignExpr list = --throw $ NoteExcp $ printf "\n____\
                                                                                 then Assigned (allGlobalStringLists !! i)
                                                                               else Assigned [], -- it's possible for a function to be impure with no newly assigned global variables
                                                              ensures = if i < length globalVAssignExpr
-                                                                         then JMLExpr $ foldl' (\l r ->
-                                                                                BinOpExpr l And r) jml2 $ map (\a@AssignExpr{} ->
+                                                                         then JMLExpr $ foldl' (`BinOpExpr` And) jml2 $ map (\a@AssignExpr{} ->
                                                                                   AssignExpr{assEleft = VarExpr{varType = varType $ assEleft a,
                                                                                                                 varObj = varObj $ assEleft a,
                                                                                                                 varName = "this." ++ (varName $ assEleft a)},
