@@ -293,9 +293,7 @@ getEnsures extDeclList stmts funArgs lv a = case a of
       else throw $ NoteExcp $ printf "431:\n%s" (show re) -}
 
 toJMLs :: Bool -> [[Expression]] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [JMLSyntax]
-toJMLs whetherPure globalVAssignExpr list = --throw $ NoteExcp $ printf "\n____\n%s\n____\n" (show whetherPure)
-  let allGlobalStringLists = map (map(varName . assEleft)) globalVAssignExpr
-  in zipWith (curry f) list [0 ..]
+toJMLs whetherPure globalVAssignExpr list = zipWith (curry f) list [0 ..]
   where
     f :: ((Maybe Exception,JMLExpr,Maybe JMLExpr),Int) -> JMLSyntax
     f ((Maybe.Nothing,jml1,Just (JMLExpr jml2)),i) =
