@@ -84,7 +84,7 @@ getGlobalVariables stmts params =
         in if any (\ass -> varName (assEleft ass) == var_name) l
              then l
            else r:l) [] combined_filtered
-  in removeDuplicates --throw $ NoteExcp $ printf $ intercalate "\n" $ map show removeDuplicates
+  in removeDuplicates
 
 getAllGlobalVariable :: ExternalDeclaration -> [[Expression]]
 getAllGlobalVariable extDecl@FunDef{} =
@@ -95,21 +95,14 @@ getAllGlobalVariable extDecl@FunDef{} =
       else map (prime ++) allButMain
   where
     f :: [Expression] -> Statement -> [[Expression]]
-    --CompStmt {statements :: [Statement]}
     f params a@CompStmt{} = [getGlobalVariables (statements a) params]
     f _ VarStmt{} = []
     f _ AssignStmt{} = []
-    --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}
     f params a@CondStmt{} = getGlobalVariables (statements $ siff a) params :
                             getGlobalVariables (statements $ selsee a) params : []
-    --ForStmt {acc :: Statement, cond :: Expression, step :: Statement, forBody :: Statement}
     f params a@ForStmt{} = [getGlobalVariables (statements $ forBody a) params]
-    --WhileStmt {condition :: Expression, whileBody :: Statement}
     f params a@WhileStmt{} = [getGlobalVariables (statements $ whileBody a) params]
     f _ a@FunCallStmt {} = []
-    {-TryCatchStmt {tryBody :: Statement,
-                        catchExcp :: Type Exception, catchBody :: Statement,
-                        finallyBody :: Statement}-}
     f params a@TryCatchStmt{} = getGlobalVariables (statements $ tryBody a) params :
                                 getGlobalVariables (statements $ catchBody a) params :
                                 getGlobalVariables (statements $ finallyBody a) params : []
@@ -133,7 +126,7 @@ public int foo(){
 becomes:
 
 public int foo(){
-  Global z = 0;
+  Class z = 0;
   return 9;
 }
 -}
@@ -189,7 +182,6 @@ highlightGlobalVariables extDecl =
         ++ [AssignStmt{varModifier = varModifier a,
                        assign      = AssignExpr{assEleft  = var $ head (f2 args localV (VarStmt $ assEleft $ assign a)),
                                                 assEright = assEright $ assign a}}]
-    --CondStmt {condition :: Expression, siff :: Statement, selsee :: Statement}
     f2 args localV a@CondStmt{} = highlightRight args localV (condition a) ++
                                   [CondStmt{condition = condition a,
                                             siff = head $ f2 args localV (siff a),
@@ -228,7 +220,6 @@ fromVarExprToString :: [Expression] -> [String]
 fromVarExprToString = map f
   where
     f :: Expression -> String
-    --VarExpr {varType :: Maybe (Type Types), varObj :: [String], varName :: String}
     f (VarExpr _ _ varName) = varName
     f _                     = throw $ NoteExcp "{{fromVarExprToString -> f}}: -/> VarExpr"
 
@@ -237,12 +228,12 @@ fromVarExprToString = map f
 getStmtOfVar :: [Statement] -> String -> (Statement,String)
 getStmtOfVar stmts var =
   let b     = takeFirstOccurrence f stmts
-      left  = extract b--throw $ NoteExcp $ printf "refined:\n%s" (show stmts)
+      left  = extract b
       right = whatIsThis b
   in (left,right)
   where
     takeFirstOccurrence :: (Statement -> Bool) -> [Statement] -> Statement
-    takeFirstOccurrence f [] = throw $ NoteExcp "(getStmtOfVar -> takeFIrstOccurrence): given list is empty or Statement were not found"
+    takeFirstOccurrence f [] = throw $ NoteExcp "(getStmtOfVar -> takeFirstOccurrence): given list is empty or Statement were not found"
     takeFirstOccurrence f (x:rest) = if f x then x else takeFirstOccurrence f rest
 
     -- look up the `var` in the given statement.
@@ -488,7 +479,7 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
           lookedUp = lookUpVar (expr1 a2) (expr2 a2) localVars
       in if isJust lookedUp || all isLiteral [expr1 a2, expr2 a2]
            then evaluate' (expr1 a2) (binOp a2) (expr2 a2)
-         else a2--throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show $ evaluate' (expr1 a2) (binOp a2) (expr2 a2))
+         else a2
     insertActualParameter a@UnOpExpr{} localVars =
       let inserted = insertActualParameter (expr a) localVars
           lookedUp = lookUpVar'' inserted localVars
@@ -515,9 +506,7 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
       BoolLiteral False -> False
 
     boolUnOpEvaluate :: [Expression] -> Expression -> Bool
-    boolUnOpEvaluate localVars expr = case evaluate expr localVars of
-      BoolLiteral True -> False
-      BoolLiteral False -> True
+    boolUnOpEvaluate localVars expr = not $ fromBoolLiteral (evaluate expr localVars)
 
     -- evaluates an expression by turning it to its correspondent literal value.
     -- This function is used while fully knowing that the expression CAN be evaluated
@@ -532,10 +521,8 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
     evaluate UnOpExpr{expr} localVars = evaluate (negate expr) localVars
     evaluate a@VarExpr{} localVars =
       let filtered = filter (\case AssignExpr{assEleft, assEright} -> varName a == varName assEleft) localVars
-          extractedLiteral = assEright $ head filtered --throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show a)
+          extractedLiteral = assEright $ head filtered
       in evaluate extractedLiteral localVars
-      --in if null filtered then
-         --else
     evaluate FunCallExpr{} _ = undefined
     evaluate CondExpr{} _ = undefined
     evaluate AssignExpr{} _ = undefined

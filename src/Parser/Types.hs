@@ -72,6 +72,10 @@ isLiteral (CharLiteral _) = True
 isLiteral (StringLiteral _) = True
 isLiteral _ = False
 
+fromBoolLiteral :: Expression -> Bool
+fromBoolLiteral (BoolLiteral bool) = bool
+fromBoolLiteral _ = undefined
+
 data Statement
   = CompStmt {statements :: [Statement]}
   | VarStmt {var :: Expression}

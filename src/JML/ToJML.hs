@@ -9,12 +9,7 @@ import Prelude hiding(negate)
 import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
-import Data.List(intercalate,foldl',(\\))
-import Data.Either(partitionEithers, fromRight)
-import Control.Applicative(optional)
-import Parser.Print
-import Parser.ParseStmt
-import Text.ParserCombinators.Parsec
+import Data.List(isPrefixOf,foldl')
 
 isPure :: [ExternalDeclaration] -> ExternalDeclaration -> Bool
 isPure extDeclList lV@(FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr varType _ _) _)) _ funBody)
@@ -88,18 +83,12 @@ isPure extDeclList lV@(FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr varType _ _
 jmlify :: [ExternalDeclaration] -> [([JMLSyntax], ExternalDeclaration)]
 jmlify extDeclList =
   let mutatedExtDeclList = map (highlightGlobalVariables . enforceLocalVariablesEvaluation) extDeclList
-      copulated = zip extDeclList mutatedExtDeclList
-  in map (f mutatedExtDeclList) copulated
+  in map (f mutatedExtDeclList) extDeclList
   where
-    f :: [ExternalDeclaration] -> (ExternalDeclaration,ExternalDeclaration) -> ([JMLSyntax], ExternalDeclaration)
-    f mutatedExtDeclList (extDecl,mutatedExtDecl) =
-      let fun_name = varName $ funName $ funCall $ funDecl mutatedExtDecl
+    f :: [ExternalDeclaration] -> ExternalDeclaration -> ([JMLSyntax], ExternalDeclaration)
+    f mutatedExtDeclList extDecl =
+      let fun_name = varName $ funName $ funCall $ funDecl extDecl
           jmlify_ = toJMLs (isPure extDeclList extDecl) (getAllGlobalVariable $ enforceLocalVariablesEvaluation extDecl) $ getRequireEnsureBehavior (False,Maybe.Nothing,False) mutatedExtDeclList fun_name
-          purifiedExtDecl = FunDef{funModifier=funModifier extDecl,
-                                   isPureFlag=True,
-                                   funDecl=funDecl extDecl,
-                                   throws=throws extDecl,
-                                   funBody=funBody extDecl}
       in (jmlify_,FunDef{funModifier=funModifier extDecl,
                          isPureFlag=isPure extDeclList extDecl,
                          funDecl=funDecl extDecl,
@@ -306,23 +295,29 @@ getEnsures extDeclList stmts funArgs lv a = case a of
 toJMLs :: Bool -> [[Expression]] -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)] -> [JMLSyntax]
 toJMLs whetherPure globalVAssignExpr list = --throw $ NoteExcp $ printf "\n____\n%s\n____\n" (show whetherPure)
   let allGlobalStringLists = map (map(varName . assEleft)) globalVAssignExpr
-  in zipWith (curry (f allGlobalStringLists)) list [0 ..]
+  in zipWith (curry f) list [0 ..]
   where
-    f :: [[String]] -> ((Maybe Exception,JMLExpr,Maybe JMLExpr),Int) -> JMLSyntax
-    f allGlobalStringLists ((Maybe.Nothing,jml1,Just (JMLExpr jml2)),i) =
-                                             Normal_Behavior{requires=jml1,
-                                                             assignable= if whetherPure then Assigned [] --when it's pure, then no global variable was assigned
-                                                                         else if i < length allGlobalStringLists
-                                                                                then Assigned (allGlobalStringLists !! i)
-                                                                              else Assigned [], -- it's possible for a function to be impure with no newly assigned global variables
-                                                             ensures = if i < length globalVAssignExpr
-                                                                         then JMLExpr $ foldl' (`BinOpExpr` And) jml2 $ map (\a@AssignExpr{} ->
-                                                                                  AssignExpr{assEleft = VarExpr{varType = varType $ assEleft a,
-                                                                                                                varObj = varObj $ assEleft a,
-                                                                                                                varName = "this." ++ (varName $ assEleft a)},
-                                                                                             assEright = assEright a}) (globalVAssignExpr !! i)
-                                                                       else JMLExpr jml2}
-    f _ ((Just excp,jml1,Maybe.Nothing),_) = Exceptional_Behavior{requires=jml1,
+    f :: ((Maybe Exception,JMLExpr,Maybe JMLExpr),Int) -> JMLSyntax
+    f ((Maybe.Nothing,jml1,Just (JMLExpr jml2)),i) =
+      let f a@(StringLiteral str) | "this." `isPrefixOf` str = VarExpr{varType = Maybe.Nothing,
+                                                                       varObj = [],
+                                                                       varName = tail $ dropWhile(/='.') str} --throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show a)
+          f a@BinOpExpr{} = BinOpExpr{expr1=f $ expr1 a,binOp = binOp a,expr2 = f $ expr2 a}
+          f a = a
+      in Normal_Behavior{requires=jml1,
+                         assignable= if whetherPure then Assigned [] --when it's pure, then no global variable was assigned
+                                     else if i < length globalVAssignExpr
+                                            then Assigned (globalVAssignExpr !! i)
+                                          else Assigned [], -- it's possible for a function to be impure with no newly assigned global variables
+                         ensures = if i < length globalVAssignExpr
+                                     then JMLExpr $ foldl' (`BinOpExpr` And) (f jml2) $ map (\a@AssignExpr{} ->
+                                            BinOpExpr{expr1 = VarExpr{varType = varType $ assEleft a,
+                                                                          varObj = varObj $ assEleft a,
+                                                                          varName = {-"this." ++-} (varName $ assEleft a)},
+                                                      binOp = Eq,
+                                                      expr2 = assEright a}) (globalVAssignExpr !! i)
+                                   else JMLExpr jml2}
+    f ((Just excp,jml1,Maybe.Nothing),_) = Exceptional_Behavior{requires=jml1,
                                                                   signals=excp}
 
 toJML :: [JMLSyntax] -> String
