@@ -168,19 +168,19 @@ public /*@ pure @*/ boolean boo29(){
 /*@ normal behavior
   @ requires z>=0;
   @ assignable y, y1, y2, t1;
-  @ ensures \result == (((7 &&
-  @         y==0) &&
-  @         y1==0) &&
-  @         y2==0) &&
+  @ ensures \result == 7 &&
+  @         y==0 &&
+  @         y1==0 &&
+  @         y2==0 &&
   @         t1==7;
   @ also
   @ normal behavior
   @ requires z<0;
   @ assignable y, y1, y2, t2;
-  @ ensures \result == (((17 &&
-  @         y==0) &&
-  @         y1==0) &&
-  @         y2==0) &&
+  @ ensures \result == 17 &&
+  @         y==0 &&
+  @         y1==0 &&
+  @         y2==0 &&
   @         t2==17;
   @*/
 public int boo30(int z){
@@ -240,8 +240,8 @@ public int boo32(){
   @ ensures \result == i;
   @ also
   @ exceptional behavior
-  @ requires (i<=y &&
-  @          i*i!=y) &&
+  @ requires i<=y &&
+  @          i*i!=y &&
   @          i==y;
   @ signals Exception;
   @*/

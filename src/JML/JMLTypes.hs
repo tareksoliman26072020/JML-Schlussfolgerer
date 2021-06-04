@@ -46,7 +46,13 @@ ppRequires input = ppRequires' input ""
 
 newtype JMLExpr = JMLExpr Expression deriving Eq
 instance Show JMLExpr where
-  show (JMLExpr expr) = showExpr expr
+  show (JMLExpr expr) = case expr of--showExpr expr
+    a@BinOpExpr{}
+      | binOp a `elem` [Eq,Neq,Less,LessEq,Greater,GreaterEq,Plus,Minus,Mult,Div] ->
+          show (JMLExpr $ expr1 a) ++ show (binOp a) ++ show (JMLExpr $ expr2 a)
+      | binOp a `elem` [And,Or] ->
+          show (JMLExpr $ expr1 a) ++ " " ++ show (binOp a) ++ " " ++ show (JMLExpr $ expr2 a)
+    _ -> showExpr expr
 
 data JMLLiterals = Old
                  | Result
