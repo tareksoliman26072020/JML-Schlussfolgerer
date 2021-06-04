@@ -1,3 +1,4 @@
+{-# Language LambdaCase #-}
 module Parser.Types where
 
 import qualified Control.Exception as E
@@ -18,6 +19,31 @@ instance Show BinOp where
   show And       = "&&"
   show Or        = "||"
 
+-- | precedence of binary operators in proper order
+data Prec = PMul | PAdd | PCmp | PAnd | POr deriving (Enum, Eq, Ord, Show)
+
+prec :: BinOp -> Prec
+prec = \case
+  Plus -> PAdd
+  Mult -> PMul
+  Minus -> PAdd
+  Div -> PMul
+  Mod -> PMul
+  And -> PAnd
+  Or -> POr
+  _ -> PCmp
+
+-- | associativity of binary operators
+data Assoc = ALeft | ARight | ANon deriving (Eq, Show)
+
+-- | compute associativity from precedence rather than from operators directly
+assoc :: Prec -> Assoc
+assoc = \case
+  PMul -> ALeft
+  PAdd -> ALeft
+  PCmp -> ANon
+  _ -> ARight
+
 data UnOp = NotOp deriving Eq
 instance Show UnOp where
   show NotOp = "!"
@@ -37,7 +63,7 @@ data Expression
   | AssignExpr {assEleft :: Expression, assEright :: Expression}
   | ExcpExpr {excpName :: Exception, excpmsg :: Maybe String}
   | ReturnExpr {returnE :: Maybe Expression}
-  deriving (Eq,Show)
+  deriving (Eq, Show)
 
 isLiteral :: Expression -> Bool
 isLiteral (IntLiteral _) = True
@@ -83,7 +109,7 @@ data Types
   | Float
   | Long
   | Byte
-  
+
 --  | Exception Exception
   deriving(Eq,Show)
 

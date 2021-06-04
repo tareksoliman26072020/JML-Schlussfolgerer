@@ -112,25 +112,26 @@ binOps :: [BinOp]
 binOps = [ Plus, Mult, Minus, Div, Mod, Less, LessEq, Greater, GreaterEq
   , Eq, Neq, And, Or ]
 
-parseBinOp :: Parser BinOp
-parseBinOp =
-  choice $ map (\ a -> a <$ keyword (show a)) binOps
+parseBinOp :: Prec -> Parser BinOp
+parseBinOp p =
+  choice . map (\ a -> a <$ keyword (show a)) $ filter ((== p) . prec) binOps
 
-parseBinRight :: Parser (BinOp, Expression)
-parseBinRight = do
-  o <- parseBinOp
-  e <- primExpr
-  pure (o, e)
-
-parseBinExpr :: Parser Expression
-parseBinExpr = do
-  e1 <- primExpr
-  l <- many parseBinRight
-  pure $ foldl (\ a (o, e) -> BinOpExpr a o e) e1 l
+parseBinExpr :: Prec -> Parser Expression
+parseBinExpr p = let
+  q = if p == PMul then primExpr else parseBinExpr (pred p)
+  o = flip BinOpExpr <$> parseBinOp p in case assoc p of
+    ALeft -> chainl1 q o
+    ARight -> chainr1 q o
+    ANon -> do
+      e <- q
+      m <- optionMaybe $ parseBinOp p
+      case m of
+        Nothing -> pure e
+        Just b -> BinOpExpr e b <$> q
 
 parseExpr :: Parser Expression
 parseExpr = do
-  e1 <- parseBinExpr
+  e1 <- parseBinExpr POr
   m <- optionMaybe $ skipChar '?'
   case m of
     Just _ -> do

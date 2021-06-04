@@ -19,8 +19,8 @@ showExpr :: Expression -> String
 showExpr = \case
   VarExpr {varType, varObj, varName} -> maybe "" ((++ " ") . showType) varType
     ++ intercalate "." (varObj ++ [varName])
-  BinOpExpr {expr1, binOp, expr2} ->
-    showParenExpr expr1 ++ " " ++ show binOp ++ " " ++ showParenExpr expr2
+  BinOpExpr {expr1, binOp, expr2} -> let p = prec binOp in
+    showLeftArg p expr1 ++ show binOp ++ showRightArg p expr2
   UnOpExpr {unOp, expr} -> show unOp ++ showParenExpr expr
   IntLiteral num -> show num
   BoolLiteral bool -> map toLower $ show bool
@@ -40,14 +40,29 @@ showExpr = \case
     ++ maybe "" show excpmsg ++ ")"
   ReturnExpr {returnE} -> "return" ++ maybe "" ((" " ++) . showExpr) returnE
 
-parenExpr :: Expression -> String
-parenExpr = ("(" ++) . (++ ")") . showExpr
+addParen :: String -> String
+addParen = ("(" ++) . (++ ")")
 
 showParenExpr :: Expression -> String
-showParenExpr e = case e of
-  BinOpExpr {} -> parenExpr e
-  CondExpr {} -> parenExpr e
-  _ -> showExpr e
+showParenExpr e = (case e of
+  BinOpExpr {} -> addParen
+  CondExpr {} -> addParen
+  _ -> id) $ showExpr e
+
+showArg :: Assoc -> Prec -> Expression -> String
+showArg a p e = (case e of
+  CondExpr {} -> addParen
+  BinOpExpr {binOp} -> let q = prec binOp in case compare p q of
+    LT -> addParen
+    EQ -> if a == assoc q then id else addParen
+    GT -> id
+  _ -> id) $ showExpr e
+
+showLeftArg :: Prec -> Expression -> String
+showLeftArg p = (if p > PCmp then (++ " ") else id) . showArg ALeft p
+
+showRightArg :: Prec -> Expression -> String
+showRightArg p = (if p > PCmp then (" " ++) else id) . showArg ARight p
 
 showModifiers :: [Modifier] -> String
 showModifiers = \case
@@ -81,7 +96,7 @@ showStmt = \case
   AssignStmt {varModifier, assign} ->
     showModifiers varModifier ++ showExpr assign
   CondStmt {condition, siff, selsee} ->
-    "if" ++ parenExpr condition
+    "if" ++ addParen (showExpr condition)
     ++ showStmt siff ++ case selsee of
       CompStmt [] -> ""
       _ -> "\nelse" ++ showStmt selsee
