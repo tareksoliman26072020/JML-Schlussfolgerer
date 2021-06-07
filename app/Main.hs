@@ -1,7 +1,7 @@
 module Main where
 
 import Examples
-import Parser.ParseStmt(parseExtDecl)
+import Parser.ParseStmt
 import Text.ParserCombinators.Parsec
 import Data.Either
 import JML.ToJML(jmlify,toJML)
@@ -15,7 +15,7 @@ main :: IO()
 main = do
   path <- getArgs
   inp <- readFile (head path)
-  let extDeclList = fromRight undefined (parse (many parseExtDecl) "" inp)
+  let extDeclList = fromRight undefined (parse parseDeclList "" inp)
   --let prettyP = foldl' (\acc elm -> acc ++ showDecl elm) "" extDeclList
   let res = jmlify extDeclList
   let prettyP = foldl' (\acc (jml,extDecl) -> acc ++ toJML jml ++ "\n" ++ showDecl extDecl ++ "\n\n") "" res

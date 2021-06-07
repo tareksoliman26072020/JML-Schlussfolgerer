@@ -1,6 +1,5 @@
 module Examples where
 import Data.Maybe
-import Control.Monad.State(StateT(runStateT))
 
 example75 = "public static void main(String[] args) throws ArithmeticException {" ++ "\n"
          ++ "  int x = 5;" ++ "\n"
@@ -462,7 +461,6 @@ example107 = unlines [example105,example106,example106_2,example108,example109,e
 
 spaces n = replicate n ' '
 
-banana = ((fst . fromJust) .) . runStateT
 -------------------------------------------------
 --TODO: parse list of generics instead of only single generic: in parsing variables, functions
 --TODO: parseBinOp for ++, --, += , ....etc

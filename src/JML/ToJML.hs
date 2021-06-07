@@ -10,6 +10,7 @@ import Data.Maybe(fromMaybe, isNothing, isJust,fromJust,catMaybes)
 import Control.Exception(throw)
 import Text.Printf
 import Data.List(isPrefixOf,foldl')
+import Interpreter.Interpreter
 
 isPure :: [ExternalDeclaration] -> ExternalDeclaration -> Bool
 isPure extDeclList lV@(FunDef _ _ (FunCallStmt (FunCallExpr (VarExpr varType _ _) _)) _ funBody)
@@ -122,7 +123,7 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
       filter (\(a,_,_) -> isJust a) $ process2 stmts lv condExpr assign
     process1 stmts funArgs funArgsLV lv condExpr (CondStmt condition ifComp elseComp) = --throw $ NoteExcp $ printf "162:\n%s" (show stmts)
       let requires1 = refineRes $ process0 stmts funArgs funArgsLV (lv ++ getCompStmtLocalVariables ifComp) (appendBoolExprRight condExpr condition) ifComp
-          requires2 = refineRes $ process0 stmts funArgs funArgsLV (lv ++ getCompStmtLocalVariables elseComp) (appendBoolExprRight condExpr (negate condition)) elseComp
+          requires2 = refineRes $ process0 stmts funArgs funArgsLV (lv ++ getCompStmtLocalVariables elseComp) (appendBoolExprRight condExpr (negateBoolLiteral condition)) elseComp
       in requires1 ++ requires2
     process1 stmts funArgs funArgsLV lv condExpr (ForStmt AssignStmt{assign=AssignExpr{assEleft=VarExpr{varName}}} cond _ forBody) =
       let x = refineRes $ process0 stmts funArgs funArgsLV (lv ++ [varName] ++ getCompStmtLocalVariables forBody) (appendBoolExprRight condExpr cond) forBody
@@ -152,13 +153,13 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
       | varName `elem` lv = [(Maybe.Nothing,JMLExpr condExpr,Just $ JMLExpr a)]
     process2 stmts lv condExpr (ArrayExpr _ (Just expr)) = process2 stmts lv condExpr expr
     process2 stmts lv condExpr (BinOpExpr expr1 _ expr2) = process2 stmts lv condExpr expr1 ++ process2 stmts lv condExpr expr2
-    process2 stmts lv condExpr (UnOpExpr _ expr) = process2 stmts lv (negate condExpr) expr
+    process2 stmts lv condExpr (UnOpExpr _ expr) = process2 stmts lv (negateBoolLiteral condExpr) expr
     process2 _ lv condExpr FunCallExpr{funName=VarExpr{varName},funArgs} =
       let rec = getRequireEnsureBehavior (True,Just $ copulateVarNameToActualParameters extDeclList varName funArgs,False) extDeclList varName
       in refineRes $ appendOriginalCondExpr rec varName condExpr
     process2 stmts lv condExpr (CondExpr eiff ethenn elsee) =
       let x1 = process2 stmts lv (appendBoolExprRight condExpr eiff) ethenn
-          x2 = process2 stmts lv (appendBoolExprRight condExpr (negate eiff)) elsee
+          x2 = process2 stmts lv (appendBoolExprRight condExpr (negateBoolLiteral eiff)) elsee
       in x1 ++ x2
     process2 stmts lv condExpr (AssignExpr exprL exprR) =
       let x1 = process2 stmts lv condExpr exprR
