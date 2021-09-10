@@ -53,6 +53,11 @@ parseFor = do
   s <- parseStmt <* skipChar ')'
   ForStmt i c s <$> parseStmt
 
+parseWhile :: Parser Statement
+parseWhile = do
+  i <- keyword "while" *> skipChar '(' *> parseExpr <* skipChar ')'
+  WhileStmt i <$> parseStmt
+
 parseTry :: Parser Statement
 parseTry = do
   t <- keyword "try" *> parseStmt
@@ -74,7 +79,7 @@ parseExcp = do
     (skipChar '(' *> skip stringLit <* skipChar ')')
 
 parseStmt :: Parser Statement
-parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseTry
+parseStmt = parseBlock <|> parseIf <|> parseFor <|> parseWhile <|> parseTry
   <|> parseReturn <|> parseExcp <|> parseDeclOrFunCall
 
 parseExtDecl :: Parser ExternalDeclaration

@@ -80,7 +80,6 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
                        selsee    = CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}}
       -- delete if
       | fst (evaluate_if_else (condition a) localVars) &&
-
         fst (snd $ evaluate_if_else (condition a) localVars) =
           let CompStmt{statements = theElses} = selsee a
           in CondStmt{condition = BoolLiteral False,
@@ -106,10 +105,27 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
                  cond = cond a,
                  step = step a,
                  forBody = CompStmt{statements = enforceEvaluation orgBody (localVars ++ getCompStmtLocalVariables' orgBody)}}
-    f2 a@WhileStmt{} localVars =
-      let CompStmt{statements = orgBody} = whileBody a
-      in WhileStmt{condition = insertActualParameter (condition a) localVars,
-                   whileBody = CompStmt{statements = enforceEvaluation orgBody (localVars ++ getCompStmtLocalVariables' orgBody)}}
+    f2 a@WhileStmt{} localVars
+      | isJust (lookUpVar'' (condition a) localVars) &&
+        cannotEvaluate (condition a) (fromJust $ lookUpVar'' (condition a) localVars) =
+          let stmts = statements $ whileBody a
+          in WhileStmt{condition = insertActualParameter (condition a) localVars,
+                       whileBody = CompStmt{statements = enforceEvaluation stmts (localVars ++ getCompStmtLocalVariables' stmts)}}
+      --while's conditional expression is evaluation and gives true, therefore the while is to be deleted.
+      | fst (evaluate_if_else (condition a) localVars) &&
+        fst (snd $ evaluate_if_else (condition a) localVars) =
+          WhileStmt{condition = BoolLiteral False,
+                    whileBody = CompStmt{statements=[]}}
+      --while's conditional expression is evaluation and gives false, therefore the while is to be deleted.
+      | fst (evaluate_if_else (condition a) localVars) &&
+        snd (snd $ evaluate_if_else (condition a) localVars) =
+          let stmts = statements $ whileBody a
+          in WhileStmt{condition = BoolLiteral True,
+                       whileBody = CompStmt{statements = enforceEvaluation stmts (localVars ++ getCompStmtLocalVariables' stmts)}}
+      | not (fst $ evaluate_if_else (condition a) localVars) =
+          let stmts = statements $ whileBody a
+          in WhileStmt{condition = condition a,
+                       whileBody = CompStmt{statements = enforceEvaluation stmts (localVars ++ getCompStmtLocalVariables' stmts)}}
     f2 a@TryCatchStmt{} localVars =
       let CompStmt{statements = tryOrgBody} = tryBody a
           CompStmt{statements = catchOrgBody} = catchBody a
