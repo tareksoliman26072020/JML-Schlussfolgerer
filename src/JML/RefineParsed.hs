@@ -186,6 +186,7 @@ highlightGlobalVariables extDecl =
                                   [CondStmt{condition = condition a,
                                             siff = head $ f2 args localV (siff a),
                                             selsee = head $ f2 args localV (selsee a)}]
+    f2 args localV a@ReturnStmt{returnS=Just b} = highlightRight args localV b ++ [a]
     f2 _ _ a = [a]
 
 --this negates an BinOp,UnOp,BoolLiteral expression
