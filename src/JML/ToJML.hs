@@ -118,6 +118,7 @@ getRequireEnsureBehavior (called,maybeActualParameters,enforced) extDeclList fun
     process0 _ _ _ _ _ _ = throw $ NoteExcp "{{getRequireEnsureBehavior -> process1}}: (-/> CompStmt)"
 
     process1 :: [Statement] -> [Expression] -> [String] -> [String] -> Expression -> Statement -> [(Maybe Exception,JMLExpr,Maybe JMLExpr)]
+    process1 stmts funArgs funArgsLV lv condExpr (a@CompStmt{}) = process0 stmts funArgs funArgsLV lv condExpr a--throw $ NoteExcp "meow"
     process1 stmts _ _ lv condExpr (VarStmt expr) = process2 stmts lv condExpr expr
     process1 stmts _ _ lv condExpr (AssignStmt _ assign) =
       filter (\(a,_,_) -> isJust a) $ process2 stmts lv condExpr assign

@@ -24,12 +24,12 @@ int foo(int i){
 
 so when foo(5):
 int foo(int i){
-  if(i>=0) return i;
+  return 5;
 }
 
 and when foo(-5):
 int foo(int i){
-  if(i<0) return (-1)*i;
+  return (-1)*5;
 }
 -}
 enforceActualParameterEvaluation :: [ExternalDeclaration] -> String -> [Expression] -> [ExternalDeclaration]
@@ -82,16 +82,12 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
       | fst (evaluate_if_else (condition a) localVars) &&
         fst (snd $ evaluate_if_else (condition a) localVars) =
           let CompStmt{statements = theElses} = selsee a
-          in CondStmt{condition = BoolLiteral False,
-                      siff = CompStmt{statements=[]},
-                      selsee = CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}}
+          in CompStmt{statements = enforceEvaluation theElses (localVars ++ getCompStmtLocalVariables' theElses)}
       -- delete else
       | fst (evaluate_if_else (condition a) localVars) &&
         snd (snd $ evaluate_if_else (condition a) localVars) =
           let CompStmt{statements = theIfs} = siff a
-          in CondStmt{condition = BoolLiteral True,
-                      siff = CompStmt{statements = enforceEvaluation theIfs (localVars ++ getCompStmtLocalVariables' theIfs)},
-                      selsee = CompStmt{statements=[]}}
+          in CompStmt{statements = enforceEvaluation theIfs (localVars ++ getCompStmtLocalVariables' theIfs)}
       -- alter body of if and else in case the seeked CondStmt is nested
       | not (fst $ evaluate_if_else (condition a) localVars) =
           let CompStmt{statements = theIfs}   = siff a
