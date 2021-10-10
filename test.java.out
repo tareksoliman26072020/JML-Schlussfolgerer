@@ -102,11 +102,7 @@ public /*@ pure @*/ int boo27(int i){
   }
 }
 
-/*@ exceptional behavior
-  @ requires true;
-  @ signals Exception;
-  @ also
-  @ normal behavior
+/*@ normal behavior
   @ requires true;
   @ assignable \nothing;
   @ ensures \result == 5;

@@ -123,16 +123,44 @@ enforceEvaluation stmts localVars = map (`f2` localVars) stmts
           in WhileStmt{condition = condition a,
                        whileBody = CompStmt{statements = enforceEvaluation stmts (localVars ++ getCompStmtLocalVariables' stmts)}}
     f2 a@TryCatchStmt{} localVars =
-      let CompStmt{statements = tryOrgBody} = tryBody a
-          CompStmt{statements = catchOrgBody} = catchBody a
-          CompStmt{statements = finallyOrgBody} = finallyBody a
-      in TryCatchStmt{tryBody = CompStmt{statements = enforceEvaluation tryOrgBody (localVars ++ getCompStmtLocalVariables' tryOrgBody)},
-                      catchExcp = catchExcp a,
-                      catchBody = CompStmt{statements = enforceEvaluation catchOrgBody (localVars ++ getCompStmtLocalVariables' catchOrgBody)},
-                      finallyBody = CompStmt{statements = enforceEvaluation finallyOrgBody (localVars ++ getCompStmtLocalVariables' finallyOrgBody)}}
+      let interpretedTry = enforceEvaluation (statements $ tryBody a) (getCompStmtLocalVariables' (statements $ tryBody a))
+          thrownException = exceptionIsThrown interpretedTry []
+      in if not $ null thrownException
+           then let catchedExcp = Exception $ typee $ catchExcp a
+                in if catchedExcp `elem` thrownException
+                     then CompStmt{statements = statements (catchBody a) ++ statements (finallyBody a)}
+                   else let CompStmt{statements = tryOrgBody} = tryBody a
+                            CompStmt{statements = catchOrgBody} = catchBody a
+                            CompStmt{statements = finallyOrgBody} = finallyBody a
+                        in TryCatchStmt{tryBody = CompStmt{statements = enforceEvaluation tryOrgBody (localVars ++ getCompStmtLocalVariables' tryOrgBody)},
+                                        catchExcp = catchExcp a,
+                                        catchBody = CompStmt{statements = enforceEvaluation catchOrgBody (localVars ++ getCompStmtLocalVariables' catchOrgBody)},
+                                        finallyBody = CompStmt{statements = enforceEvaluation finallyOrgBody (localVars ++ getCompStmtLocalVariables' finallyOrgBody)}}
+         else let CompStmt{statements = tryOrgBody} = tryBody a
+                  CompStmt{statements = catchOrgBody} = catchBody a
+                  CompStmt{statements = finallyOrgBody} = finallyBody a
+              in TryCatchStmt{tryBody = CompStmt{statements = enforceEvaluation tryOrgBody (localVars ++ getCompStmtLocalVariables' tryOrgBody)},
+                              catchExcp = catchExcp a,
+                              catchBody = CompStmt{statements = enforceEvaluation catchOrgBody (localVars ++ getCompStmtLocalVariables' catchOrgBody)},
+                              finallyBody = CompStmt{statements = enforceEvaluation finallyOrgBody (localVars ++ getCompStmtLocalVariables' finallyOrgBody)}}
     f2 ReturnStmt{returnS = Just a} localVars = ReturnStmt{returnS = Just $ insertActualParameter a localVars} --throw $ NoteExcp $ printf "\n___\n%s\n___\n" (show $ insertActualParameter a localVars)
     f2 stmt localVars = stmt
 
+    exceptionIsThrown :: [Statement] -> [Parser.Types.Exception] -> [Parser.Types.Exception]
+    exceptionIsThrown [] res = res
+    exceptionIsThrown (a@CompStmt{}:rest) res = exceptionIsThrown (statements a ++ rest) res
+    exceptionIsThrown (VarStmt{}:rest) res = exceptionIsThrown rest res
+    exceptionIsThrown (AssignStmt _ assign:rest) res = case assign of
+      a@ExcpExpr{} -> exceptionIsThrown rest (res ++ [excpName a])
+      _            -> exceptionIsThrown rest res
+    exceptionIsThrown (CondStmt{}:rest) res = exceptionIsThrown rest res
+    exceptionIsThrown (a@ForStmt{}:rest) res = exceptionIsThrown (statements (forBody a) ++ rest) res
+    exceptionIsThrown (a@WhileStmt{}:rest) res = exceptionIsThrown (statements (whileBody a) ++ rest) res
+    exceptionIsThrown (TryCatchStmt{}:rest) res = throw $ NoteExcp "interpretation of nested try-catch-statement in not implemented yet"
+    exceptionIsThrown (ReturnStmt{returnS = Just a@ExcpExpr{}}:rest) res = exceptionIsThrown rest (res ++ [excpName a])
+    exceptionIsThrown (ReturnStmt{}:rest) res = exceptionIsThrown rest res
+    
+    
     -- it examines the if-else statement, to know whether it's the one whose body should be altered.
     -- If it is the one, then (fst evaluate_if_else) == True. Otherwise its return type is (False,undefined)
     -- Also: If it is the one, and the if statement needs to altered,   then its return type is (True,(True,False))
